@@ -19,10 +19,10 @@ int main(){
     int ret;
     ret = fork(); /// en ret queda el pid del hijo (si sos padre) o 0 si sos hijo.
 
-    if( ret == -1 ){
+    if( ret == -1 ){ //Error
         printf("Hubo error, no hay memoria.\n");
     }
-    if( ret == 0 ){
+    if( ret == 0 ){ //Hijo
 
         sleep(1);
 
@@ -32,12 +32,12 @@ int main(){
         printf("Hola soy el hijo.\n");
         printf("Soy hijo tengo pid %d\n", getpid() );
     }
-    if(ret != 0){
+    if(ret != 0){ //Padre
         valor = 3;
         printf("valor vale %d\n",valor);
 
         printf("Hola soy el padre.\n");
-        printf("Sy el pid de mi hijo es %d\n", ret );
+        printf("El pid de mi hijo es %d\n", ret );
     }
 
     return 0;
