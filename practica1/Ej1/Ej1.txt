@@ -1,0 +1,9 @@
+a) al tratar de escribir sobre un fd cerrado, write devuelve -1.
+
+b)al intentar leer sobre un fd cerrado, read devuelve -1.
+
+c)La copia cerrada no permite lectura ni escritura, pero la otra sigue en pie.
+
+d) al hacer fork, getpid() no cambia de valor. Al hacer exec si cambia el valor.
+
+e) 
