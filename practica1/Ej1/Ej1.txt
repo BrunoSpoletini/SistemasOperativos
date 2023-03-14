@@ -6,4 +6,6 @@ c)La copia cerrada no permite lectura ni escritura, pero la otra sigue en pie.
 
 d) al hacer fork, getpid() no cambia de valor. Al hacer exec si cambia el valor.
 
-e) 
+e)El hijo aparece como zombie en la tabla de procesos. Sigue existiendo porque el sistema operativo no sabe si el proceso padre en algun momento le va a hacer wait.
+
+f) 

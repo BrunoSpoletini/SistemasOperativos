@@ -1,28 +1,24 @@
-#include <unistd.h>
+#include <stdio.h>
 #include <stdlib.h>
-#include <stdio.h>
-#include <stdio.h>
-#include <sys/types.h>
+#include <unistd.h>
+#include <string.h>
+#include <signal.h>
 
-/// estoy en windows esto no corre.
+int main()
+{
+	pid_t pid;
 
-int main() {
+	pid = fork();
+	if (pid < 0)
+		abort();
 
-    int pid = fork();
-
-    if(pid == 0){
-        /// soy child
-        exit(0);
-
-    }else{
-        /// soy padre.
-        while(1){
-            sleep(1000);
-        }
-
-    }
-
-
-    return 0;
-
+	if (pid == 0) {
+		printf("Hijo: soy %d\n", getpid());
+		exit(1);
+	} else {
+		printf("Padre: soy %d\n", getpid());
+		pause();
+	}
 }
+
+/// con el comando ps -au vemos que el hijo queda en status Z+.

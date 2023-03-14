@@ -15,35 +15,23 @@ int main(){
 
 
     char *token;
-    token = strtok(buff, " ");
-
-    char comando[1000];
+    token = strtok(buff, " \n"); /// separa segun espacio y \n
     
-    strcpy(comando, token);
-
-    char **argumentos;
-    argumentos = malloc(sizeof(char)* 100);//100 argumentos top
-
-    for(int i=0; token!=NULL; i++){
-        token = strtok(NULL, " ");
-        argumentos[i] = malloc(sizeof(token));
-        strcpy(argumentos[i], token);
-        argumentos[i+1] = NULL;
-   }
-   printf("hola\n");
-
-    char ruta[1000];
-    strcpy(ruta, "/usr/bin");
-    strcpy(ruta, comando);
-    execvp( ruta, argumentos );
-
-    //strtok();
-
-    // shell proceso parent
-    // parseo de input
-    // fork por comando, shell en wait
-
-
-
+    char *path = malloc( 1000 ); /// 1000 caracteres
+    strcat( path , "/bin/" ) ;
+    strcat( path , token ) ;
+    
+    char *args[100];
+    int index = 0;
+    while(token != NULL){
+	args[index] = malloc(strlen(token)+1);
+	strcpy(args[index],token); 
+    token = strtok(NULL, " \n");
+    index++;
+    args[index] = NULL; /// el ultimo argumento tiene que ser NULL.
+    }
+    
+    execv(path,args);
+    
     return 0;
 }
