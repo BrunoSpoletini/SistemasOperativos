@@ -68,6 +68,7 @@ void d(){
 		wait(NULL);
 	}
 	// Al hacer exec se mantiene el pid actual.
+	// (Para ver esto, se puede crear otro programa que muestre su pid, y llamarlo con un exec desde d())
 }
 
 
@@ -83,15 +84,22 @@ void e(){
 		fprintf(stderr, "Fork error\n");
 		break;
 	case 0: //Child
-		printf("PID1: %d", getpid());
+		printf("PID1: %d\n", getpid());
 		exit(0);
 		break;
 	default: //Parent
-		printf("PID2: %d", getpid());
+		printf("PID2: %d\n", getpid());
 		sleep(1000);
 		break;
 	}
-	// TO DO --- No logro encontrar el proceso child en la tabla
+	/*
+	Con el comando ps -au vemos que el hijo queda en status Z+. 
+	Es responsabilidad del padre leer el codigo de finalizacion del hijo,
+	por lo que si el hijo termina antes, se quedara en estado zombie, esperando
+	que el padre termine. 
+	Si el padre termina antes que el hijo, el hijo se volvera huerfano,
+	y el proceso init sera el nuevo parent.
+	*/
 }
 
 
@@ -107,12 +115,89 @@ void f(){
 	}
 	// El proceso reserva la memoria virtual, pero la memoria fisica comienza a asignarse realmente
 	// mientras se va utilizando.
+	/*
+	Luego de hacer el malloc:
+	PID USUARIO   PR  NI    VIRT    RES    SHR S  %CPU  %MEM     HORA+ ORDEN                    
+  30027 bruno     20   0  979336    944    852 S   0,0   0,0   0:00.00 a.out   
+
+	Luego de un rato de escribir en la memoria previamente solicitada:
+	PID USUARIO   PR  NI    VIRT    RES    SHR S  %CPU  %MEM     HORA+ ORDEN  
+  30027 bruno     20   0  979336   2836   1480 S  21,3   0,1   0:01.82 a.out                   
+
 	
+	*/
 
 }
+
+//g) ¿Qué pasa con el uso de memoria de un proceso al realizar fork()? ¿Y exec()?
+void g(){
+  	if (1) { // 1 para fork(), 2 para exec()
+		char* buff = malloc(1e+9);	
+		for (int i=0; i<1e+9; i++){
+			buff[i]='A';
+		}
+
+		pid_t pid = fork();
+
+		switch (pid)
+		{
+		case -1:
+			fprintf(stderr, "Fork error\n");
+			break;
+		case 0: //Child
+			printf("Pid Child: %d\n", getpid());
+			sleep(1000);
+			break;
+		default: //Parent
+			printf("Pid Parent: %d\n", getpid());
+			wait(NULL);
+			break;
+		}
+		/*
+
+
+		Pid Child: 32669
+		Pid Parent: 32668
+		PID USUARIO   PR  NI    VIRT    RES    SHR S  %CPU  %MEM     HORA+ ORDEN                    
+  	  32669 bruno     20   0  979336 977060    512 S   0,0  25,6   0:04.11 a.out                    
+  	  32668 bruno     20   0  979336 977464    888 S   0,0  25,6   0:04.15 a.out  
+
+		Se copia la memoria del proceso padre al proceso hijo.
+		
+		*/
+
+	} else {
+		char* buff = malloc(1e+9);	
+		for (int i=0; i<1e+9; i++){
+			buff[i]='A';
+		}
+
+		printf("Pid Proceso original: %d\n", getpid());
+		getchar(); // Para revisar el estado del proceso antes de ejecutar exec
+
+		execl("./aux.out", "aux.out", NULL);
+		
+		/*
+
+		PID USUARIO   PR  NI    VIRT    RES    SHR S  %CPU  %MEM     HORA+ ORDEN                    
+	  32145 bruno     20   0  979336 977680   1072 S   0,0  25,6   0:04.54 a.out 
+
+		Memoria del proceso auxiliar:
+		PID USUARIO   PR  NI    VIRT    RES    SHR S  %CPU  %MEM     HORA+ ORDEN                    
+	  32145 bruno     20   0    2772    968    876 S   0,0   0,0   0:04.60 aux.out
+
+		Vemos como la memoria no se copia al hacer un exec
+
+		*/
+	}
+
+}
+
+
 /*
-g) ¿Qué pasa con el uso de memoria de un proceso al realizar fork()? ¿Y exec()?
 h) ¿Qué pasa con los file descriptor de un proceso al hacer fork()? ¿Y exec()?
+	Los file descriptor estan en kernel space, por lo que al hacer exec deberian persistir (solo se reemplaza el user space).
+	Y al hacer fork, supongo que se copian los fd.
 i) El comando de cambio de directorio cd suele ser un built-in de la shell. ¿Puede implementarse mediante un programa al igual que, ej., ls?
 */
 
@@ -120,8 +205,10 @@ i) El comando de cambio de directorio cd suele ser un built-in de la shell. ¿Pu
 
 
 int main() {
-	
-	f();
+	/* Pendientes:
+		1)  g) Clase proxima
+	*/
+	g();
 	
 
 
