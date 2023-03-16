@@ -194,21 +194,62 @@ void g(){
 }
 
 
-/*
-h) ¿Qué pasa con los file descriptor de un proceso al hacer fork()? ¿Y exec()?
-	Los file descriptor estan en kernel space, por lo que al hacer exec deberian persistir (solo se reemplaza el user space).
-	Y al hacer fork, supongo que se copian los fd.
-i) El comando de cambio de directorio cd suele ser un built-in de la shell. ¿Puede implementarse mediante un programa al igual que, ej., ls?
-*/
 
+//h) ¿Qué pasa con los file descriptor de un proceso al hacer fork()? ¿Y exec()?
+
+void h(){
+  	if (1) { // 1 para fork(), 2 para exec()
+		write(1, "STDOUT antes del fork\n", 22);
+
+		pid_t pid = fork();
+
+		switch (pid){
+		case -1:
+			fprintf(stderr, "Fork error\n");
+			break;
+		case 0: //Child
+			write(1, "STDOUT despues del fork, desde el child\n", 40);
+			sleep(1);
+			close(1);
+			break;
+		default: //Parent
+			write(1, "STDOUT despues del fork, desde el parent\n", 41);
+			sleep(2);
+			write(1, "STDOUT despues del fork, desde el parent, luego de cerrar el fd(1) en el child\n", 79);
+			wait(NULL);
+			break;
+		}
+	} else {
+		write(1, "STDOUT antes del exec\n", 22);
+		close(1); // Cerramos la salida estandar
+		execl("./aux.out", "aux.out", NULL);
+	}
+	/*
+	En este caso cerramos el fd(1) desde el child, y desde el parent, luego de 2 segundos, escribimos exitosamente
+	por el fd(1). Con esto vemos que los fd se copian al realizar el fork, por lo que podemos trabajar con
+	ellos de forma independiente.
+
+	En cambio, al usar exec, cerramos el fd(1), y con exec ejecutamos otro programa, que intenta escribir en fd(1) y falla.
+	Esto ocurre porque todos los files descriptors se preservan a traves de las llamadas a exec*.
+	*/
+}
+
+
+//i) El comando de cambio de directorio cd suele ser un built-in de la shell. ¿Puede implementarse mediante un programa al igual que, ej., ls?
+void i(){
+
+	printf("Uso de programa cd\n");
+	execl("./cd.out","cd.out", "/usr/" , NULL);
+//TO DO
+}
 
 
 
 int main() {
 	/* Pendientes:
-		1)  g) Clase proxima
+		1) i)
 	*/
-	g();
+	i();
 	
 
 
