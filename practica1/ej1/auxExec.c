@@ -15,11 +15,17 @@ int main(){
     sleep(100);
     */
 
-
+    /*
     // Ej 1) h)
     int r;
     write(1, "Salida por stdout (1)!\n", 23);
     write(2, "Salida por stderr (2)!\n", 23); 
+    */
+    
+    //5)
+    ungetc('h', stdin);
+    char x = getchar();
+    printf("%c\n", x);
     
     return 0;
 }

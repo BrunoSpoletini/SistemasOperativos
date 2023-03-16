@@ -245,6 +245,7 @@ void i(){
 
 
 
+
 int main() {
 	/* Pendientes:
 		1) i)
