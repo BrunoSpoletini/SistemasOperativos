@@ -19,17 +19,58 @@ TO DO:
 Checkeo de error en el malloc?
 */
 
+void runP(char** args){
+    int err = 0, tempFD, fileFD, red = 0;
+    char **args1, **args2, simb;
+
+    for (int i = 0; args[i] != NULL; i++) {
+        if (strcmp(args[i], ">" ) == 0 ){ //|| strcmp(args[i], "<" ) == 0) {
+            args1 = &args[0];
+            args2 = &args[i+1];
+            simb = args[i][0];
+            args[i] = NULL;
+            red = 1;
+        }
+    }
+
+    if (red == 1) {
+        fileFD = open(args2[0], O_RDWR | O_CREAT | O_APPEND, 0666);
+        dup2(fileFD, 1);
+    } 
+
+    err = execvp(args[0], args); //Busca la funcion "fun" en el path y la ejecuta con los argumentos args[]
+    if (err != 0) {
+        printf("Orden no encontrada\n");
+        err = 0;
+    }
+
+    // if (red == 1) { // Como se duplican los fd con el fork, en teoria cuando muera el proceso, los fd se resolverian solos...?
+    //     dup2(tempFD, 1);
+    //     close(fileFD);
+    //     printf("Test stdout\n");
+    // }
+
+}
+
+void freeArr(char **args){
+    int i = 0;
+    while(args[i] != NULL){
+        free(args[i]);
+        i++;
+    }
+}
+
 int main(){
     int index = 0, err = 0;
-    char buff[1000], *args[1000], *token, *fun;
+    char buff[1000], **args, *token;
+    args = malloc(sizeof(char)*1000);
     pid_t pid;
     
     while(1){
         fgets(buff, 1000, stdin );
         token = strtok(buff, " \n"); /// separa segun espacio y \n
-        fun = token;
 
-        for(int i = 0 ; token != NULL ; i++) {
+        for(int i = 0 ; token != NULL ; i++) { //Parseo del string ingresado en argumentos
             args[i] = malloc(strlen(token)+1);
             args[i] = token;
             token = strtok(NULL, " \n");
@@ -42,17 +83,16 @@ int main(){
                 fprintf(stderr, "Fork error\n");
                 break;
             case 0: //Child
-                err = execvp(fun, args); //Busca la funcion "fun" en el path y la ejecuta con los argumentos args[]
-                if (err != 0) {
-                    printf("Orden no encontrada\n");
-                    err = 0;
-                }
+                runP(args);
                 break;
             default: //Parent
                 wait(NULL);
+                //freeArr(args);
                 break;
         }
     }
+
+    //free(args);
     
     return 0;
 }
