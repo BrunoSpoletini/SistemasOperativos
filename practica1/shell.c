@@ -16,27 +16,33 @@ directorio donde se encuentre lo que queremos ejecutar.
 
 
 TO DO:
+De momento, soporta un unico redireccionamiento de saldia estandar a la vez.
 Checkeo de error en el malloc?
 */
+void freeArr(char **args){
+    int i = 0;
+    while(args[i] != NULL){
+        free(args[i]);
+        i++;
+    }
+}
 
 void runP(char** args){
-    int err = 0, tempFD, fileFD, red = 0;
-    char **args1, **args2, simb;
+    int err = 0, tempFD, fileFD, red = 0, i = 0;
+    char **args1, **filename, simb;
 
-    for (int i = 0; args[i] != NULL; i++) {
-        if (strcmp(args[i], ">" ) == 0 ){ //|| strcmp(args[i], "<" ) == 0) {
-            args1 = &args[0];
-            args2 = &args[i+1];
-            simb = args[i][0];
+
+
+    while( args[i] != NULL ){
+        if (strcmp(args[i], ">" ) == 0 && (red == 0) ){
+            filename = &args[i+1];
             args[i] = NULL;
-            red = 1;
+            fileFD = open(filename[0], O_RDWR | O_CREAT | O_APPEND, 0666);
+            dup2(fileFD, 1);            
         }
+        i++;
     }
 
-    if (red == 1) {
-        fileFD = open(args2[0], O_RDWR | O_CREAT | O_APPEND, 0666);
-        dup2(fileFD, 1);
-    } 
 
     err = execvp(args[0], args); //Busca la funcion "fun" en el path y la ejecuta con los argumentos args[]
     if (err != 0) {
@@ -52,18 +58,12 @@ void runP(char** args){
 
 }
 
-void freeArr(char **args){
-    int i = 0;
-    while(args[i] != NULL){
-        free(args[i]);
-        i++;
-    }
-}
+
 
 int main(){
     int index = 0, err = 0;
     char buff[1000], **args, *token;
-    args = malloc(sizeof(char)*1000);
+    args = malloc(sizeof(char*)*1000);
     pid_t pid;
     
     while(1){
@@ -72,7 +72,7 @@ int main(){
 
         for(int i = 0 ; token != NULL ; i++) { //Parseo del string ingresado en argumentos
             args[i] = malloc(strlen(token)+1);
-            args[i] = token;
+            strcpy(args[i], token);
             token = strtok(NULL, " \n");
             args[i+1] = NULL; /// el ultimo argumento tiene que ser NULL. 
         }
@@ -87,12 +87,12 @@ int main(){
                 break;
             default: //Parent
                 wait(NULL);
-                //freeArr(args);
+                freeArr(args);
                 break;
         }
     }
 
-    //free(args);
+    free(args);
     
     return 0;
 }
