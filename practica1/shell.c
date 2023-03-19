@@ -28,32 +28,78 @@ void freeArr(char **args){
 }
 
 void runP(char** args){
-    int err = 0, tempFD, fileFD, red = 0, i = 0;
-    char **args1, **filename, simb;
+    int err = 0, tempFD0, tempFD1, fileFD, red = 0, i = 0, procesos = 0, pos[256], pipeFD[2];
+    char **args1, **filename, simb, ***proc;
+    pid_t pid;
 
 
-
-    while( args[i] != NULL ){
-        if (strcmp(args[i], ">" ) == 0 && (red == 0) ){
+    while( (args[i] != NULL) && (red == 0) ){
+        /*if ( strcmp(args[i], ">" ) == 0 ){
             filename = &args[i+1];
             args[i] = NULL;
             fileFD = open(filename[0], O_RDWR | O_CREAT | O_APPEND, 0666);
-            dup2(fileFD, 1);            
+            dup2(fileFD, 1);
+            red = 1;    
+        }*/
+        if ( i == 0 ) {
+            pos[procesos] = i;
+            procesos++;
+        }
+        if ( strcmp(args[i], "|") == 0 ){
+            pos[procesos] = i+1;
+            procesos++;
+            args[i] = NULL;
         }
         i++;
     }
 
+    if (procesos == 1){
+        execvp(args[0], args);
+    } else {
+        tempFD0 = dup(0);
+        tempFD1 = dup(1);
+        pipe(pipeFD);
+  
+        for (int j = 0; j < procesos; j++){
 
-    err = execvp(args[0], args); //Busca la funcion "fun" en el path y la ejecuta con los argumentos args[]
-    if (err != 0) {
-        printf("Orden no encontrada\n");
-        err = 0;
+
+
+
+            dup2(pipeFD[1], 1); //Esta parte hay que corregirla y posib. reubicarla en el child.
+            if (j != 0){
+                dup2(pipeFD[0], 0);
+            }
+            if (j == (procesos-1)){
+                dup2(tempFD1, 1);
+            }
+
+
+
+            pid = fork();
+            switch (pid) {
+                case -1:
+                    fprintf(stderr, "Fork error\n");
+                    exit(0);
+                    break;
+                case 0: //Child
+
+                    execvp(args[pos[j]], &args[pos[j]]);
+                    break;
+                default: //Parent
+
+                    wait(NULL);
+                    break;
+            }
+        }
+
     }
 
-    // if (red == 1) { // Como se duplican los fd con el fork, en teoria cuando muera el proceso, los fd se resolverian solos...?
-    //     dup2(tempFD, 1);
-    //     close(fileFD);
-    //     printf("Test stdout\n");
+
+
+    // err = execvp(args[0], args); //Busca la funcion "fun" en el path y la ejecuta con los argumentos args[]
+    // if (err != 0) {
+    //     printf("Orden no encontrada\n");
+    //     err = 0;
     // }
 
 }
