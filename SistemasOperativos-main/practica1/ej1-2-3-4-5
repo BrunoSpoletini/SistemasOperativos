@@ -1,0 +1,27 @@
+2) ¿Cómo piensa que está implementado?
+    Supongo que pipe redirecciona la salida estandar de un programa por la entrada estandar de otro.
+
+Al ejecutar un pipeline como el anterior, ¿cómo es el uso de CPU del proceso "yes"?
+    ???
+
+3) ¿Que pasa cuando un proceso no libera su memoria (con free()) antes de terminar?
+    La memoria permanece ocupada hasta que el proceso finalice, para luego ser liberada
+    por el sistema operativo.
+
+4) ¿Es free() una llamada al sistema? ¿Por qué sí o por qué no?
+    En informática, llamada al sistema (system call) es el mecanismo usado por una aplicación para
+    solicitar un servicio al sistema operativo.
+    free() es una funcion de la libreria estandar de C, que se utiliza para liberar la memoria 
+    previamente asignada por un malloc/calloc/realloc. Cuando se llama a free, se libera la memoria
+    de la region especificada, devolviendosela al sistema operativo.
+    En teoria no es una llamada directa al sistema, pero si que termina invocando al sistema operativo
+    para liberar la memoria.
+
+5)  ¿Es getchar() una llamada al sistema? ¿Por que si o por que no? ¿Como funciona ungetc()?
+    getchar() es una funcion de la libreria stdio.h de C. Se encarga de leer un caracter por la entrada estandar.
+    No clasifica como una llamada al sistema como tal. Las funciones de mas bajo nivel en cambio,
+    tales como open y write si son llamadas al sistema.
+    ungetc() apila caracteres en stream de entrada que se le pasa como parametro.
+    ungetc('x', stdin) apila el caracter x en la entrada estandar, de forma tal que al leer de la entrada estandar,
+    lo primero que leemos es el caracter x.
+

@@ -1,0 +1,2 @@
+#define SRV_NAME "./SERVIDOR"
+#define MSG_LENGHT 1024
