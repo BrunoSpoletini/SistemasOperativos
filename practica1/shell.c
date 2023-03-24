@@ -58,35 +58,61 @@ void runP(char** args){
     } else {
         tempFD0 = dup(0);
         tempFD1 = dup(1);
-        pipe(pipeFD);
-  
-        for (int j = 0; j < procesos; j++){
+        
+        for (int j = procesos-1; j >= 0; j--){ // creamos los procesos en orden inverso.
 
-
-
+            pipe(pipeFD);
 
             dup2(pipeFD[1], 1); //Esta parte hay que corregirla y posib. reubicarla en el child.
+            //pipe[0] = read
+            //pipe[1] = write
             if (j != 0){
                 dup2(pipeFD[0], 0);
             }
-            if (j == (procesos-1)){
-                dup2(tempFD1, 1);
-            }
-
 
 
             pid = fork();
+            /// forkeamos y despues el hijo nos pasa su fd[0].
+            /// este valor (fdsig) se lo tenemos que pasar al siguiente (anterior) hijo que creemos.
+            /// y en este nuevo hijo, hacemos dup(fdsig, 1). entonces el stdout de este hijo pasa a ser stdin del siguiente.
+            /// 
             switch (pid) {
                 case -1:
                     fprintf(stderr, "Fork error\n");
                     exit(0);
                     break;
                 case 0: //Child
+                    close(pipeFD[1]);
+                    char buff[100];
+                    read(pipeFD[0],buff,100);
+                    int FD0sig = atoi(buff); 
 
-                    execvp(args[pos[j]], &args[pos[j]]);
+                    //pipe[0] = read
+                    //pipe[1] = write
+                    /// FD 0 = STDIN
+                    /// FD 1 = STDOUT
+
+                    /// el pŕimer proceso se le cambia el stdout al stdin del segundo proceso.
+                    /// o sea un dup( PIPEFDSEGUNDO[0] ,1) en el hijo 1.
+
+                    /// salvo el ultimo, que hay que dup2(tempFD1, 1) 
+                    dup2( pipeFD[0] , 1 ); /// el std pasa a ir 
+                    if (j == (procesos-1)){
+                        dup2(tempFD1, 1);
+                    }
+                    /// redireccionar:
+
+                    execvp(args[pos[j]], &args[pos[j]]); /// los fds se mantienen.
                     break;
                 default: //Parent
 
+                    write()
+                    if(){
+                        close(pipeFD[1]);
+                    }
+                    if(){
+                        close(pipeFD[0]);
+                    }
                     wait(NULL);
                     break;
             }
