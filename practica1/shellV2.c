@@ -27,67 +27,6 @@ void freeArr(char **args){
     }
 }
 
-void runP2(char** args){
-    int err = 0, tempFD, fileFD, red = 0, i = 0, procesos = 0, pos[256];
-    pid_t pid;
-    int pipeFD[2];
-
-    while( (args[i] != NULL) && (red == 0) ){
-        if ( i == 0 ) {
-            pos[procesos] = i;
-            procesos++;
-        }
-        if ( strcmp(args[i], "|") == 0 ){
-            pos[procesos] = i+1;
-            procesos++;
-            args[i] = NULL;
-        }
-        i++;
-    }
-
-    if (procesos == 1){
-        execvp(args[0], args);
-    } else {
-        pipe(pipeFD);
-
-
-        for (int j = 0; j < procesos; j++){
-
-            int inputFD = j == 0 ? 0 : pipeFD[0];
-            int outputFD = j == procesos - 1 ? 1 : pipeFD[1];
-
-            // Create child process
-            pid = fork();
-            switch (pid) {
-                case -1:
-                    fprintf(stderr, "Fork error\n");
-                    break;
-                case 0: //Child
-                    // Redirect input and output
-                    if (dup2(inputFD, 0) == -1) {
-                        fprintf(stderr, "Error redirecting input\n");
-                        exit(EXIT_FAILURE);
-                    }
-                    if (dup2(outputFD, 1) == -1) {
-                        fprintf(stderr, "Error redirecting output\n");
-                        exit(EXIT_FAILURE);
-                    }
-                    execvp(args[pos[j]], &args[pos[j]]);
-                    break;
-                default: //parent
-                    if (j > 0) {
-                        close(pipeFD[0]);
-                    }
-                    if (j < procesos - 1) {
-                        close(pipeFD[1]);
-                    }
-
-                    wait(NULL);
-                    break;
-            }
-        }
-    }
-}
 void runP(char** args){
     int err = 0, tempFD0, tempFD1, fileFD, red = 0, i = 0, procesos = 0, pos[256], pipeFD[2], cont=0;
     char **args1, **filename, simb, *proc[256][32];
@@ -102,10 +41,10 @@ void runP(char** args){
             dup2(fileFD, 1);
             red = 1;    
         }*/
-        if ( i == 0 ) {
-            pos[procesos] = i;
-            procesos++;
-        }
+        // if ( i == 0 ) {
+        //     pos[procesos] = i;
+        //     procesos++;
+        // }
 
         
 
@@ -123,18 +62,18 @@ void runP(char** args){
         }
         i++;
     }
+    procesos++;
 
     if (procesos == 1){
-        execvp(args[0], args);
+        execvp(proc[0][0], proc[0]);
     } else {
         tempFD0 = dup(0);
         tempFD1 = dup(1);
+
         
         for (int j = 0; j < procesos; j++){
-            pipe(pipeFD);
-            printf("test\n");
-            printf("Comando: %s\n", &args[pos[procesos]]);
             
+            pipe(pipeFD);
 
             int fdin = j == 0 ? tempFD0 : pipeFD[0] ;
             int fdout = j == (procesos -1) ? tempFD1 : pipeFD[1];
@@ -147,32 +86,32 @@ void runP(char** args){
                     break;
                 case 0: //Child
                     close(pipeFD[1]);
+                    //dup2(fdin, 0);
+                    dup2(fdin, 0);
 
-                    dup2(fdout, 1);
-
-                    execvp(args[pos[j]], &args[pos[j]]);
+                    execvp(proc[j][0], proc[j]);
                     break;
                 default: //Parent
-                    close(pipeFD[0]);
-                    dup2(fdin, 0);
-                    if (j == (procesos - 1)){
-                        dup2(tempFD0, 0);
-                        dup2(tempFD1, 1);
+
+                    dup2(fdout,0);
+                     if (j > 0) {
+                        close(pipeFD[0]);
                     }
                     //wait(NULL);
                     break;
             }
         }
+        dup2(tempFD0,0);
 
     }
 
 
 
-    err = execvp(args[0], args); //Busca la funcion "fun" en el path y la ejecuta con los argumentos args[]
-    if (err != 0) {
-        printf("Orden no encontrada\n");
-        err = 0;
-    }
+    // err = execvp(args[0], args); //Busca la funcion "fun" en el path y la ejecuta con los argumentos args[]
+    // if (err != 0) {
+    //     printf("Orden no encontrada\n");
+    //     err = 0;
+    // }
 
 }
 
