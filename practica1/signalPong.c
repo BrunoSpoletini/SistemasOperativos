@@ -34,16 +34,28 @@ int main(){
         exit(0);
         break;
     case 0: //child
-
-        signal(SIGUSR1, handlerUsrHijo);
-        while (1){;}
+        struct sigaction sa;
+        sa.sa_handler = handlerUsrHijo;
+        sa.sa_flags = 0;
+        
+        sigaction(SIGUSR1, &sa, NULL);
+        
+        //while (1){;}
+        pause();
         
     default: //parent
-        //signal(SIGUSR1, SIG_DFL);
+        struct sigaction sa2;
+        sa2.sa_handler = handlerUsrPadre;
+        sa2.sa_flags = 0;
+        
+        sigaction(SIGUSR1, &sa2, NULL);  
+        
         sleep(1);
         kill(pid, SIGUSR1);
-        signal(SIGUSR1, handlerUsrPadre);
-        while (1){;}
+        
+      
+        pause();
+        //while (1){;}
         break;
     }
 

@@ -26,16 +26,16 @@ void handler(int s) {
     exit(0); //No esta definido el comportamiento si no se hace un exit/longjump desde el handler
 }
 
-int main2() {
+int main() {
     int r;
-    signal(SIGFPE, handler);
+    struct sigaction sa;
+    sa.sa_handler = handler;
+    sa.sa_flags = 0;
+
+    sigaction(SIGFPE, &sa, NULL);
     r = 1 / denom;
     printf("r = %d\n", r);
     return 0;
-}
-
-void handlerInt(int s){
-    
 }
 
 void INThandler(int sig) {
@@ -52,7 +52,7 @@ void INThandler(int sig) {
     getchar();
 }
 
-int main() {
+int main2() {
 
     signal(SIGINT, INThandler);
     while (1)
