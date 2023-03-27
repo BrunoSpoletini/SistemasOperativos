@@ -8,6 +8,9 @@
 #include <netinet/in.h>
 #include <netinet/ip.h>
 
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 /*
  * Para probar, usar netcat. Ej:
  *
@@ -25,7 +28,7 @@ void quit(char *s)
 	abort();
 }
 
-int U = 0;
+//int U = 0;
 
 int fd_readline(int fd, char *buf)
 {
@@ -36,7 +39,8 @@ int fd_readline(int fd, char *buf)
 	 * Leemos de a un caracter (no muy eficiente...) hasta
 	 * completar una línea.
 	 */
-	while ((rc = read(fd, buf + i, 1)) > 0) {
+	while ((rc = read(fd, buf + i, 1)) > 0)
+	{
 		if (buf[i] == '\n')
 			break;
 		i++;
@@ -49,49 +53,69 @@ int fd_readline(int fd, char *buf)
 	return i;
 }
 
-void handle_conn(int csock)
+void handle_conn(int csock, int id)
 {
 	char buf[200];
 	int rc;
 
-	while (1) {
+	while (1)
+	{
 		/* Atendemos pedidos, uno por linea */
 		rc = fd_readline(csock, buf);
 		if (rc < 0)
 			quit("read... raro");
 
-		if (rc == 0) {
+		if (rc == 0)
+		{
 			/* linea vacia, se cerró la conexión */
 			close(csock);
 			return;
 		}
 
-		if (!strcmp(buf, "NUEVO")) {
+		if (!strcmp(buf, "NUEVO"))
+		{	
 			char reply[20];
-			sprintf(reply, "%d\n", U);
-			U++;
+			sprintf(reply, "%d\n", id);
 			write(csock, reply, strlen(reply));
-		} else if (!strcmp(buf, "CHAU")) {
+		}
+		else if (!strcmp(buf, "PRINT"))
+		{
+			write(csock, "Output check\n", 13);
+		}
+		else if (!strcmp(buf, "CHAU"))
+		{
+			write(csock, "Nos vemos\n", 10);
 			close(csock);
-			return;
+			exit(0);
 		}
 	}
 }
 
-void wait_for_clients(int lsock)
+void wait_for_clients(int lsock, int id)
 {
 	int csock;
+	
 
 	/* Esperamos una conexión, no nos interesa de donde viene */
 	csock = accept(lsock, NULL, NULL);
-	if (csock < 0)
+	if (csock < 0){
 		quit("accept");
-
-	/* Atendemos al cliente */
-	handle_conn(csock);
-
-	/* Volvemos a esperar conexiones */
-	wait_for_clients(lsock);
+	} else {
+		pid_t pid = fork();
+		switch (pid)
+		{
+		case -1:
+			quit("Fork fail");
+			break;
+		case 0: // child
+			/* Atendemos al cliente */
+			handle_conn(csock, id);
+		default:
+			/* Volvemos a esperar conexiones */
+			wait_for_clients(lsock, id+1);
+			break;
+		}
+	}
 }
 
 /* Crea un socket de escucha en puerto 4040 TCP */
@@ -130,7 +154,10 @@ int mk_lsock()
 
 int main()
 {
-	int lsock;
+	int lsock, id=0;
+
 	lsock = mk_lsock();
-	wait_for_clients(lsock);
+	
+	wait_for_clients(lsock, id);
+
 }
