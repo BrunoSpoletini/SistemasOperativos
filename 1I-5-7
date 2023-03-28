@@ -1,0 +1,44 @@
+1 i) El comando de cambio de directorio cd suele ser un built-in de la shell. ¿Puede implementarse
+mediante un programa al igual que, ej., ls?
+
+Si inicialmente nuestro programa contara con la direccion absoluta del mismo,
+podemos emular un cambio de directorio llevando una variable que representa el PATH, y luego
+correr comandos utilizando este PATH como direccionamiento absoluto. Sin embargo, el programa que corre
+esta simulación de chdir tiene una unica dirección donde se ejecuta 
+y no puede moverse de esa dirección.
+
+
+5)
+¿Es getchar() una llamada al sistema? ¿Por que si o por que no? ¿Como funciona ungetc()?
+
+    getchar() es una funcion de la libreria stdio.h de C. Se encarga de leer un caracter por la entrada estandar.
+    No clasifica como una llamada al sistema como tal. Las funciones de mas bajo nivel en cambio,
+    tales como open y write si son llamadas al sistema.
+    ungetc() apila caracteres en stream de entrada que se le pasa como parametro.
+    ungetc('x', stdin) apila el caracter x en la entrada estandar, de forma tal que al leer de la entrada estandar,
+    lo primero que leemos es el caracter x.
+
+---------------------------------
+getchar() es equivalente a getc(stdin), entonces, lee el siguiente caracter de stdin y lo devuelve.
+Por lo tanto, tiene una llamada a read(), el cual es una llamada al sistema. Por lo tanto getchar() es una llamada al sistema
+---------------------------------
+
+7)
+El siguiente programa intenta corregir con gracia una division por cero, atrapando la señal
+correspondiente (SIGFPE) y modificando el denominador de la division en ese caso.
+¿Que pasa al correr el programa? ¿Por que?
+
+para dividir dos numeros, tenemos que realizar las siguientes instrucciones en assembler:
+1) movl	denom(%rip), %ecx /// guardamos el valor de denom en %ecx (denominador)
+2) movl	$1, %eax /// guardamos 1 en el %eax (numerador)
+3) cltd  /// se extiende con signo eax en edx:eax
+4) idivl %ecx /// se realiza la division
+
+La SIGFPE es raiseada en la instruccion 4.
+Al intentar modificar el denominador, estamos editando la variable global denom. Sin embargo,
+cuando volvemos del handler, seguimos la ejecución desde la instrucción 4 (allí quedó el
+contador de programa). Y como la división se realiza con el registro %ecx, se vuelve a dividir
+por cero, ya que no corrió la instruccion 1.
+
+
+
