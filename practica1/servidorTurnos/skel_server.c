@@ -1,6 +1,7 @@
 #define MAX_EVENTS 256
 #define READ_SIZE 256
 #define MAX_CLIENTS 256
+#define TIMEOUT 10000
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -38,8 +39,6 @@ void quit(char *s)
 	abort();
 }
 
-//int U = 0;
-
 int fd_readline(int fd, char *buf)
 {
 	int rc;
@@ -63,146 +62,104 @@ int fd_readline(int fd, char *buf)
 	return i;
 }
 
-void handle_conn(int csock, int id)
+int handle_conn(int csock, int id)
 {
-	char buf[200];
+	char buf[READ_SIZE];
 	int rc;
 
-	while (1)
-	{
-		/* Atendemos pedidos, uno por linea */
-		rc = fd_readline(csock, buf);
-		if (rc < 0)
-			quit("read... raro");
+	/* Atendemos pedidos, uno por linea */
+	rc = fd_readline(csock, buf);
+	if (rc < 0)
+		quit("read... raro");
 
-		if (rc == 0)
-		{
-			/* linea vacia, se cerró la conexión */
-			close(csock);
-			return;
-		}
-
-		if (!strcmp(buf, "NUEVO"))
-		{	
-			char reply[20];
-			sprintf(reply, "%d\n", id);
-			write(csock, reply, strlen(reply));
-		}
-		else if (!strcmp(buf, "PRINT"))
-		{
-			write(csock, "Output check\n", 13);
-		}
-		else if (!strcmp(buf, "CHAU"))
-		{
-			write(csock, "Nos vemos\n", 10);
-			close(csock);
-			exit(0);
-		}
+	/* Linea vacia, se cerró la conexión */
+	if (rc == 0){
+		write(csock, "Cliente desconectado\n", 21);
+		return -1;
 	}
+
+	if (!strcmp(buf, "NUEVO"))
+	{	
+		char reply[20];
+		sprintf(reply, "%d\n", id);
+		write(csock, reply, strlen(reply));
+	}
+	else if (!strcmp(buf, "PRINT"))
+	{
+		write(csock, "Output check\n", 13);
+	}
+	else if (!strcmp(buf, "CHAU"))
+	{
+		write(csock, "Cliente desconectado\n", 21);	
+		return -1;
+	}
+	return 0;
 }
 
-void wait_for_clients(int lsock, int id)
+void wait_for_clients(int lsock)
 {
 	int csock[MAX_CLIENTS], run = 1, events_count, bytes_read, csock_count=0;
 	char buff[READ_SIZE];
-	struct epoll_event event, events[MAX_EVENTS];
+
+	struct epoll_event events[MAX_EVENTS];
 	int epoll_fd = epoll_create1(0);
 	if (epoll_fd == -1) {
-		fprintf(stderr, "Fallo al crear epoll fd\n");
-		exit(1);
+		quit("Fallo al crear epoll fd\n");
 	}
-	event.events = EPOLLIN | EPOLLOUT;// Can append "|EPOLLOUT" for write events as well
-	event.data.fd = 0;
-
-	events[0].events = EPOLLIN | EPOLLOUT;
-	events[0].data.fd = lsock;
+	
 	// Registro el socket de servidor en epoll
+	events[0].events = EPOLLIN;
+	events[0].data.fd = lsock;
 	if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, lsock, &events[0])) {
 		fprintf(stderr, "Fallo al agregar fd a epoll\n");
 		close(epoll_fd);
 		exit(1);
 	}
 
-	// // Registro stdin en epoll
-	// if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, 0, &event)) {
-	// 	fprintf(stderr, "Fallo al agregar fd a epoll\n");
-	// 	close(epoll_fd);
-	// 	exit(1);
-	// }
-	
 	while(run){
-		printf("Waiting...\n");
 
-		events_count = epoll_wait(epoll_fd, events, MAX_EVENTS, 100000);
-		printf("%d eventos listos.\n", events_count);
+		events_count = epoll_wait(epoll_fd, events, MAX_EVENTS, TIMEOUT);
 
 		for(int i=0; i < events_count; i++){
 
 			if (events[i].data.fd == lsock) {
 				csock[csock_count] = accept(lsock, NULL, NULL);
-				if (csock[i] < 0){
+				if (csock[csock_count] < 0){
 					quit("accept");
 				} else {
-					csock_count++;
-					// Registro el socket del cliente en epoll
-					if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, csock[csock_count-1], &event)) {
+					
+					// Registro el socket del cliente en epoll 
+					events[csock_count+1].events = EPOLLIN;
+					events[csock_count+1].data.fd = csock[csock_count];
+					if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, csock[csock_count], &events[csock_count+1])) {
 						fprintf(stderr, "Fallo al agregar fd a epoll\n");
 						close(epoll_fd);
 						exit(1);
 					}
 					// Hacemos el nuevo socket no bloqueante
-					if (fcntl(csock[csock_count-1], F_SETFL, O_NONBLOCK) < 0) {
+					if (fcntl(csock[csock_count], F_SETFL, O_NONBLOCK) < 0) {
 						perror("Fallo al hacer el socket no bloqueante");
 						exit(1);
 					}
-					printf("Sucess...?\n");
-					write(csock[0], "Cliente conectado!!!!\n", 19);
+					write(csock[csock_count], "Cliente conectado!\n", 19);
+					csock_count++;
 				}
-
-			} else if (events[i].data.fd == 0) {
-				printf("Leyendo fd: '%d' - ", events[i].data.fd);
-				bytes_read = read(events[i].data.fd, buff, READ_SIZE); 
-				printf("%d bytes read.\n", bytes_read);
-				buff[bytes_read] = '\0';
-				printf("Read '%s'\n", buff);
-			
-				if(!strncmp(buff, "stop\n", 5))
-				run = 0;
-			} 
-
+			} else {
+				for(int j = 0; j  < csock_count; j++){
+					if (events[i].data.fd == csock[j]) {
+						if (handle_conn(csock[j], j) == -1){
+							if (epoll_ctl(epoll_fd, EPOLL_CTL_DEL, csock[j], &events[j+1])) {
+								fprintf(stderr, "Fallo al quitar fd de epoll\n");
+								close(epoll_fd);
+								exit(1);
+							}
+							//close(csock[j]); Si lo cierro falla, pero entiendo que deberia cerrarlo
+						}
+					} 
+				}
+			}
 		}
-
-
-
-
-
 	}
-	
-	
-	
-	// 	csock = accept(lsock, NULL, NULL);
-	// 	if (csock < 0){
-	// 		quit("accept");
-	// 	} else {
-	
-	// 		pid_t pid = fork();
-	// 		switch (pid)
-	// 		{
-	// 		case -1:
-	// 			quit("Fork fail");
-	// 			break;
-	// 		case 0: // child
-	// 			/* Atendemos al cliente */
-	// 			handle_conn(csock, id);
-	// 		default:
-	// 			/* Cerramos la copia del socket del proceso parent */
-	// 			close(csock);
-	// 			/* Volvemos a esperar conexiones */
-	// 			wait_for_clients(lsock, id+1);
-	// 			break;
-	// 		}
-	// 	}
-	// }
 }
 
 /* Crea un socket de escucha en puerto 4040 TCP */
@@ -239,12 +196,18 @@ int mk_lsock()
 	return lsock;
 }
 
+
+
+
+
 int main()
 {
-	int lsock, id=0;
+	int lsock;
 
 	lsock = mk_lsock();
+
+	//mk_epoll(lsock); to do
 	
-	wait_for_clients(lsock, id);
+	wait_for_clients(lsock);
 
 }
