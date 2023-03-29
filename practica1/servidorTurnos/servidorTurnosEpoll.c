@@ -6,20 +6,15 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
-
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netinet/ip.h>
-
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <fcntl.h>
-
+#include <fcntl.h> // Para hacer un socket no bloqueante
 #include <sys/epoll.h> // for epoll_create1(), epoll_ctl(), struct epoll_event
-
 #include <sys/wait.h> //Para usar wait
-
 #include <string.h> // strtok
 
 /*
@@ -33,14 +28,12 @@
  *      CHAU
  */
 
-void quit(char *s)
-{
+void quit(char *s) {
 	perror(s);
 	abort();
 }
 
-int fd_readline(int fd, char *buf)
-{
+int fd_readline(int fd, char *buf) {
 	int rc;
 	int i = 0;
 
@@ -48,8 +41,7 @@ int fd_readline(int fd, char *buf)
 	 * Leemos de a un caracter (no muy eficiente...) hasta
 	 * completar una línea.
 	 */
-	while ((rc = read(fd, buf + i, 1)) > 0)
-	{
+	while ((rc = read(fd, buf + i, 1)) > 0)	{
 		if (buf[i] == '\n')
 			break;
 		i++;
@@ -62,8 +54,7 @@ int fd_readline(int fd, char *buf)
 	return i;
 }
 
-int handle_conn(int csock, int id)
-{
+int handle_conn(int csock, int id) {
 	char buf[READ_SIZE];
 	int rc;
 
@@ -78,80 +69,51 @@ int handle_conn(int csock, int id)
 		return -1;
 	}
 
-	if (!strcmp(buf, "NUEVO"))
-	{	
+	if (!strcmp(buf, "NUEVO")) {	
 		char reply[20];
 		sprintf(reply, "%d\n", id);
 		write(csock, reply, strlen(reply));
 	}
-	else if (!strcmp(buf, "PRINT"))
-	{
+	else if (!strcmp(buf, "PRINT")) {
 		write(csock, "Output check\n", 13);
 	}
-	else if (!strcmp(buf, "CHAU"))
-	{
+	else if (!strcmp(buf, "CHAU")) {
 		write(csock, "Cliente desconectado\n", 21);	
 		return -1;
 	}
 	return 0;
 }
 
-void wait_for_clients(int lsock)
-{
+void wait_for_clients(int lsock, int epoll_fd, struct epoll_event *events) {
 	int csock[MAX_CLIENTS], run = 1, events_count, bytes_read, csock_count=0;
 	char buff[READ_SIZE];
 
-	struct epoll_event events[MAX_EVENTS];
-	int epoll_fd = epoll_create1(0);
-	if (epoll_fd == -1) {
-		quit("Fallo al crear epoll fd\n");
-	}
-	
-	// Registro el socket de servidor en epoll
-	events[0].events = EPOLLIN;
-	events[0].data.fd = lsock;
-	if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, lsock, &events[0])) {
-		fprintf(stderr, "Fallo al agregar fd a epoll\n");
-		close(epoll_fd);
-		exit(1);
-	}
-
-	while(run){
-
+	while(run) {
 		events_count = epoll_wait(epoll_fd, events, MAX_EVENTS, TIMEOUT);
-
 		for(int i=0; i < events_count; i++){
 
 			if (events[i].data.fd == lsock) {
 				csock[csock_count] = accept(lsock, NULL, NULL);
-				if (csock[csock_count] < 0){
+				if (csock[csock_count] < 0) {
 					quit("accept");
 				} else {
-					
 					// Registro el socket del cliente en epoll 
 					events[csock_count+1].events = EPOLLIN;
 					events[csock_count+1].data.fd = csock[csock_count];
 					if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, csock[csock_count], &events[csock_count+1])) {
-						fprintf(stderr, "Fallo al agregar fd a epoll\n");
 						close(epoll_fd);
-						exit(1);
-					}
-					// Hacemos el nuevo socket no bloqueante
-					if (fcntl(csock[csock_count], F_SETFL, O_NONBLOCK) < 0) {
-						perror("Fallo al hacer el socket no bloqueante");
-						exit(1);
+						quit("Fallo al agregar fd a epoll\n");
 					}
 					write(csock[csock_count], "Cliente conectado!\n", 19);
 					csock_count++;
 				}
 			} else {
-				for(int j = 0; j  < csock_count; j++){
+				for(int j = 0; j  < csock_count; j++) {
 					if (events[i].data.fd == csock[j]) {
-						if (handle_conn(csock[j], j) == -1){
+						if (handle_conn(csock[j], j) == -1) {
 							if (epoll_ctl(epoll_fd, EPOLL_CTL_DEL, csock[j], &events[j+1])) {
-								fprintf(stderr, "Fallo al quitar fd de epoll\n");
 								close(epoll_fd);
-								exit(1);
+								quit("Fallo al quitar fd de epoll\n");
 							}
 							//close(csock[j]); Si lo cierro falla, pero entiendo que deberia cerrarlo
 						}
@@ -162,9 +124,25 @@ void wait_for_clients(int lsock)
 	}
 }
 
+/* Crea una instancia de epoll y agrega lsock a la lista de control */
+int create_epoll(int lsock, struct epoll_event *events) {
+	int epoll_fd = epoll_create1(0);
+	if (epoll_fd == -1) {
+		quit("Fallo al crear epoll fd\n");
+	}
+
+	// Registro el socket de servidor en epoll
+	events[0].events = EPOLLIN;
+	events[0].data.fd = lsock;
+	if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, lsock, &events[0])) {
+		close(epoll_fd);
+		quit("Fallo al agregar fd a epoll\n");
+	}
+	return epoll_fd;
+}
+
 /* Crea un socket de escucha en puerto 4040 TCP */
-int mk_lsock()
-{
+int mk_lsock() {
 	struct sockaddr_in sa;
 	int lsock;
 	int rc;
@@ -196,18 +174,14 @@ int mk_lsock()
 	return lsock;
 }
 
-
-
-
-
-int main()
-{
-	int lsock;
-
+int main() {
+	int lsock, epoll;
+	struct epoll_event events[MAX_EVENTS];
+	
 	lsock = mk_lsock();
 
-	//mk_epoll(lsock); to do
+	epoll = create_epoll(lsock, events);
 	
-	wait_for_clients(lsock);
+	wait_for_clients(lsock, epoll, events);
 
 }
