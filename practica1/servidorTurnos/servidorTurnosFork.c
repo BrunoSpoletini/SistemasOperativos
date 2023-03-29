@@ -28,8 +28,6 @@ void quit(char *s)
 	abort();
 }
 
-//int U = 0;
-
 int fd_readline(int fd, char *buf)
 {
 	int rc;
@@ -68,6 +66,7 @@ void handle_conn(int csock, int id)
 		if (rc == 0)
 		{
 			/* linea vacia, se cerró la conexión */
+			write(csock, "Cliente desconectado\n", 21);	
 			close(csock);
 			return;
 		}
@@ -84,7 +83,7 @@ void handle_conn(int csock, int id)
 		}
 		else if (!strcmp(buf, "CHAU"))
 		{
-			write(csock, "Nos vemos\n", 10);
+			write(csock, "Cliente desconectado\n", 21);	
 			close(csock);
 			exit(0);
 		}
@@ -94,25 +93,8 @@ void handle_conn(int csock, int id)
 void wait_for_clients(int lsock, int id)
 {
 	int csock;
-	
-	/*
-	To do:
-	Cambiar wait_for_clients a iterativo
-	Crear un epoll antes del while
-	De aca para abajo meter todo dentro de un while
-	Si accept da un fd valido:
-		Almacenar los fd de las conecciones en un array de fd
-		Agregar el fd del accept al control del epoll
-	
-	De alguna forma usar epoll para que lea los msjes de los clientes, y conteste con lo que corresponda...?
-	*/
-
 	/* Esperamos una conexión, no nos interesa de donde viene */
 	csock = accept(lsock, NULL, NULL);
-
-
-
-
 
 	if (csock < 0){
 		quit("accept");
