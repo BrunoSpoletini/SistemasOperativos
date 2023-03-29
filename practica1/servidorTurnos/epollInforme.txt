@@ -1,0 +1,26 @@
+Epoll es una llamada al sistema diseñada para monitorear multiples file descriptors y verificar si es posible realizar
+operaciones de entrada/salida.
+A diferencia de poll y select, epoll puede manejar una gran cantidad de file descriptors, ya que opera en tiempo O(1).
+
+La forma de funcionamiento de la funcion epoll() en c puede resumirse en:
+- epol_fd = epoll_create1()
+    Que crea un file descriptor "epol_fd" que identifica a la instancia de epoll.
+
+- epoll_ctl()
+    Permite agregar file descriptors a la lista de interes de la instancia de epoll que se le pase como parametro.
+    Para agregarlo se le debe pasar el evento que se desea monitorear.
+    Tambien permite modificar/eliminar fd de la lista de interes.
+
+- epoll_wait()
+    Espera que se produzcan eventos de entrada/salida en los fd de interes. 
+    Bloquea el proceso actual hasta que se registren nuevos eventos.
+
+
+En el caso del servidor de turnos, al manejar cada cliente creando un nuevo proceso,
+se crea una copia de las variables del userspace del proceso padre para cada cliente.
+Esto no resulta escalable, ya que existe un limite en la cantidad de procesos que pueden
+crearse antes de que se termine la memoria del sistema.
+
+En cambio, al utilizar epoll para atender los sockets de los clientes, es posible leer/escribir de multiples
+sockets sin quedar a la espera de uno en particular, lo que permite atender a un mayor numero de clitentes 
+en simultaneo.
