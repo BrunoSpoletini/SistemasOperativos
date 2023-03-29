@@ -8,18 +8,11 @@
 
 #include <string.h> // strtok
 
-/*
-La familia de funciones exec*p (execvp(), execlp(), execvpe()) buscaran el nombre de la funcion
-a ejecutar en el PATH
-A execvp() podemos pasarle el nombre de un programa que se encuentre en el PATH, o pasale el 
-directorio donde se encuentre lo que queremos ejecutar.
+void quit(char *s) {
+	perror(s);
+	abort();
+}
 
-
-TO DO:
-Checkeo de error en el malloc?
-Checkeo de fallo de exec
-Checkeo de fallo de dup
-*/
 void freeArr(char **args){
     int i = 0;
     while(args[i] != NULL){
@@ -38,6 +31,8 @@ void runP(char** args){
             filename = &args[i+1];
             proc[procesos][cont]=NULL;
             fileFD = open(filename[0], O_RDWR | O_CREAT | O_APPEND, 0666);
+            if (fileFD == -1)
+                quit("Fallo al crear el archivo");
             dup2(fileFD, 1);
             red = 1;    
         } else if ( strcmp(args[i], "|") == 0 ){
@@ -55,16 +50,18 @@ void runP(char** args){
     procesos++;
 
     if (procesos == 1){
-        execvp(proc[0][0], proc[0]);
+        if (execvp(proc[0][0], proc[0]) == -1)
+            quit("Fallo execvp");
     } else {
         tempFD0 = dup(0);
         tempFD1 = dup(1);
         for(int j=0; j < procesos ; j++){  
-            pipe(pipeFD);
+            if (pipe(pipeFD) == -1)
+                quit("Fallo pipe");
             pid = fork();
             switch (pid) {
                 case -1:
-                    fprintf(stderr, "Fork error\n");
+                    quit("Fallo fork");
                     exit(0);
                     break;
                 case 0: //Child
@@ -75,7 +72,8 @@ void runP(char** args){
                     } else {
                         dup2(tempFD1, 1);//Solo por claridad de codigo
                     }
-                    execvp(proc[j][0], proc[j]);
+                    if (execvp(proc[j][0], proc[j]))
+                        quit("Fallo execvp\n");
                     break;
                 default: //Parent
                     close(pipeFD[1]);
@@ -97,6 +95,8 @@ int main(){
     int index = 0, err = 0;
     char buff[1000], **args, *token;
     args = malloc(sizeof(char*)*1000);
+    if(args == NULL)
+        quit("Fallo malloc");
     pid_t pid;
     
     while(1){
@@ -105,6 +105,8 @@ int main(){
 
         for(int i = 0 ; token != NULL ; i++) { //Parseo del string ingresado en argumentos
             args[i] = malloc(strlen(token)+1);
+            if (args[i] == NULL)
+                quit("Fallo malloc");
             strcpy(args[i], token);
             token = strtok(NULL, " \n");
             args[i+1] = NULL; /// el ultimo argumento tiene que ser NULL. 
@@ -113,7 +115,7 @@ int main(){
         pid = fork();
         switch (pid) {
             case -1:
-                fprintf(stderr, "Fork error\n");
+                quit("Fallo fork");
                 break;
             case 0: //Child
                 runP(args);
