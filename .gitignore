@@ -1,3 +1,4 @@
 # Ignora los ejecutables
 *.out
 .vscode
+/practica1/servidorTurnos/Tickets.txt

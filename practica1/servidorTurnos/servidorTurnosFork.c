@@ -27,9 +27,6 @@ void quit(char *s)
 	perror(s);
 	abort();
 }
-/*
-archivo
-*/
 
 int fd_readline(int fd, char *buf)
 {
@@ -54,8 +51,6 @@ int fd_readline(int fd, char *buf)
 	return i;
 }
 
-
-
 void handle_conn(int csock, int ticketfd)
 {
 	char buf[200];
@@ -78,7 +73,7 @@ void handle_conn(int csock, int ticketfd)
 		{	
 			char ticket[100];
 			lseek(ticketfd, 0, SEEK_SET) ;
-			int qr = read(ticketfd, &ticket,100);
+			read(ticketfd, &ticket,100);
 			int ticketid = atoi(ticket);
 			ticketid++;
 			sprintf(ticket,"%d",ticketid);
@@ -167,7 +162,7 @@ int main()
 
 	lsock = mk_lsock();
 	
-	int ticketfd = open("Tickets.txt",O_CREAT | O_RDWR | O_TRUNC , 666);
+	int ticketfd = open("Tickets.txt",O_CREAT | O_RDWR | O_TRUNC , 0666);
 
 	write(ticketfd,"0",1);
 
