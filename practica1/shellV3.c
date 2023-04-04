@@ -13,6 +13,19 @@ void quit(char *s) {
 	abort();
 }
 
+int safeDup(int fd){
+    int copia = dup(fd);
+    if (copia == -1){
+        quit("Fallo al realizar dup");
+    }
+    return copia;
+}
+
+
+
+
+
+
 void freeArr(char **args){
     int i = 0;
     while(args[i] != NULL){
@@ -33,7 +46,9 @@ void runP(char** args){
             fileFD = open(filename[0], O_RDWR | O_CREAT | O_APPEND, 0666);
             if (fileFD == -1)
                 quit("Fallo al crear el archivo");
-            dup2(fileFD, 1);
+            if(dup2(fileFD, 1) == -1){
+                quit("Fallo al realizar dup2");
+            }
             red = 1;    
         } else if ( strcmp(args[i], "|") == 0 ){
             proc[procesos][cont]=NULL;
@@ -54,7 +69,9 @@ void runP(char** args){
             quit("Fallo execvp");
     } else {
         tempFD0 = dup(0);
+        if (tempFD0 == -1) { quit("Fallo al realizar dup");}
         tempFD1 = dup(1);
+        if (tempFD1 == -1) { quit("Fallo al realizar dup");}
         for(int j=0; j < procesos ; j++){  
             if (pipe(pipeFD) == -1)
                 quit("Fallo pipe");
@@ -68,27 +85,28 @@ void runP(char** args){
                     close(pipeFD[0]);
                     //El proceso de la derecha de todo escribe por la salida estandar
                     if (j != (procesos-1)){
-                        dup2(pipeFD[1], 1);
+                        if(dup2(pipeFD[1], 1) == -1){
+                            quit("Fallo al realizar dup2");
+                        }
                     } else {
-                        dup2(tempFD1, 1);//Solo por claridad de codigo
+                        if(dup2(tempFD1, 1) == -1){
+                            quit("Fallo al realizar dup2");
+                        }
                     }
                     if (execvp(proc[j][0], proc[j]))
                         quit("Fallo execvp\n");
                     break;
                 default: //Parent
                     close(pipeFD[1]);
-                    dup2(pipeFD[0], 0);
+                    if(dup2(pipeFD[0], 0) == -1){
+                        quit("Fallo al realizar dup2");
+                    }
                     break;
             }
         }
-        dup2(tempFD0,0);
-        dup2(tempFD1,1);
+        if (dup2(tempFD0,0) == -1) { quit("Fallo al realizar dup2"); }
+        if (dup2(tempFD1,1) == -1) { quit("Fallo al realizar dup2"); }
     }
-
-    // if (err != 0) {
-    //     printf("Orden no encontrada\n");
-    //     err = 0;
-    // }
 }
 
 int main(){
