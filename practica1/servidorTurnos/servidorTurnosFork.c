@@ -27,6 +27,9 @@ void quit(char *s)
 	perror(s);
 	abort();
 }
+/*
+archivo
+*/
 
 int fd_readline(int fd, char *buf)
 {
@@ -51,7 +54,9 @@ int fd_readline(int fd, char *buf)
 	return i;
 }
 
-void handle_conn(int csock, int id)
+
+
+void handle_conn(int csock, int ticketfd)
 {
 	char buf[200];
 	int rc;
@@ -62,7 +67,6 @@ void handle_conn(int csock, int id)
 		rc = fd_readline(csock, buf);
 		if (rc < 0)
 			quit("read... raro");
-
 		if (rc == 0)
 		{
 			/* linea vacia, se cerró la conexión */
@@ -70,16 +74,21 @@ void handle_conn(int csock, int id)
 			close(csock);
 			return;
 		}
-
 		if (!strcmp(buf, "NUEVO"))
 		{	
+			char ticket[100];
+			lseek(ticketfd, 0, SEEK_SET) ;
+			int qr = read(ticketfd, &ticket,100);
+			int ticketid = atoi(ticket);
+			ticketid++;
+			sprintf(ticket,"%d",ticketid);
+			
+			lseek(ticketfd, 0, SEEK_SET) ;
+			write( ticketfd ,ticket , strlen(ticket) );
+
 			char reply[20];
-			sprintf(reply, "%d\n", id);
+			sprintf(reply, "%d\n", ticketid);
 			write(csock, reply, strlen(reply));
-		}
-		else if (!strcmp(buf, "PRINT"))
-		{
-			write(csock, "Output check\n", 13);
 		}
 		else if (!strcmp(buf, "CHAU"))
 		{
@@ -90,7 +99,7 @@ void handle_conn(int csock, int id)
 	}
 }
 
-void wait_for_clients(int lsock, int id)
+void wait_for_clients(int lsock, int ticketfd)
 {
 	int csock;
 	/* Esperamos una conexión, no nos interesa de donde viene */
@@ -107,12 +116,12 @@ void wait_for_clients(int lsock, int id)
 			break;
 		case 0: // child
 			/* Atendemos al cliente */
-			handle_conn(csock, id);
+			handle_conn(csock, ticketfd);
 		default:
 			/* Cerramos la copia del socket del proceso parent */
 			close(csock);
 			/* Volvemos a esperar conexiones */
-			wait_for_clients(lsock, id+1);
+			wait_for_clients(lsock, ticketfd);
 			break;
 		}
 	}
@@ -158,6 +167,10 @@ int main()
 
 	lsock = mk_lsock();
 	
-	wait_for_clients(lsock, id);
+	int ticketfd = open("Tickets.txt",O_CREAT | O_RDWR | O_TRUNC , 666);
+
+	write(ticketfd,"0",1);
+
+	wait_for_clients(lsock, ticketfd);
 
 }
