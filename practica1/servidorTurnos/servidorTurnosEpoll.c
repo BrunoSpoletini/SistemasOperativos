@@ -82,16 +82,14 @@ int handle_conn(int csock) {
 	return 0;
 }
 
-void wait_for_clients(int lsock, int epoll_fd, struct epoll_event *events) {
+void wait_for_clients(int lsock, int epoll_fd) {
 	int run = 1, events_count, bytes_read;
 	char buff[READ_SIZE];
-
-	struct epoll_event ev;
+	struct epoll_event events[MAX_EVENTS], ev;
 
 	while(run) {
 		events_count = epoll_wait(epoll_fd, events, MAX_EVENTS, TIMEOUT);
 		for(int i=0; i < events_count; i++){
-			
 			if (events[i].data.fd == lsock) {
 				int csock = accept(lsock, NULL, NULL);
 				if (csock < 0) {
@@ -113,25 +111,25 @@ void wait_for_clients(int lsock, int epoll_fd, struct epoll_event *events) {
 						close(epoll_fd);
 						quit("Fallo al quitar fd de epoll\n");
 					}
-					close( csock ); //Si lo cierro falla, pero entiendo que deberia cerrarlo
+					close( csock );
 				}
 			}
-			
 		}
 	}
 }
 
 /* Crea una instancia de epoll y agrega lsock a la lista de control */
-int create_epoll(int lsock, struct epoll_event *events) {
+int create_epoll(int lsock) {
+	struct epoll_event ev;
 	int epoll_fd = epoll_create1(0);
 	if (epoll_fd == -1) {
 		quit("Fallo al crear epoll fd\n");
 	}
 
 	// Registro el socket de servidor en epoll
-	events[0].events = EPOLLIN;
-	events[0].data.fd = lsock;
-	if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, lsock, &events[0])) {
+	ev.events = EPOLLIN;
+	ev.data.fd = lsock;
+	if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, lsock, &ev)) {
 		close(epoll_fd);
 		quit("Fallo al agregar fd a epoll\n");
 	}
@@ -173,12 +171,11 @@ int mk_lsock() {
 
 int main() {
 	int lsock, epoll;
-	struct epoll_event events[MAX_EVENTS];
 	
 	lsock = mk_lsock();
 
-	epoll = create_epoll(lsock, events);
+	epoll = create_epoll(lsock);
 	
-	wait_for_clients(lsock, epoll, events);
+	wait_for_clients(lsock, epoll);
 
 }

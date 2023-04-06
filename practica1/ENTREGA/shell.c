@@ -21,11 +21,6 @@ int safeDup(int fd){
     return copia;
 }
 
-
-
-
-
-
 void freeArr(char **args){
     int i = 0;
     while(args[i] != NULL){
