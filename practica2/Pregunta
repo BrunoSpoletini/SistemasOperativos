@@ -1,0 +1,12 @@
+1) Como funciona el pthread cuando existe un solo core?
+
+2) Puede que el ej3 no falle?
+Puede que sincronicen cache una vez que las 2 instrucciones se ejecutaron?
+
+
+
+
+
+
+
+
