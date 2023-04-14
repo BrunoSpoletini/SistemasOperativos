@@ -28,9 +28,6 @@ void * molinete1(){
     } 
 }
 
-static inline void incl(int *p) {
-asm("incl %0" : "+m"(*p) : : "memory");
-}
 
 void * molinete_single_core1(){
     for(int i = 0; i < VIS ; i++){ 
@@ -44,6 +41,25 @@ void * molinete_single_core2(){
     } 
 }
 
+
+
+void * molinete2(){
+    for(int i = 0; i < VIS; i++){ 
+        req2 = true;
+        turno = 1;
+        ///asm("mfence");
+        while(turno == 1 && req1);
+        
+        totales++;
+        //printf("Mol 2\n");    
+        req2 = false;
+    } 
+}
+static inline void incl(int *p) {
+    asm("incl %0" : "+m"(*p) : : "memory");
+}
+
+
 void * molinete_single_core_incl1(){
     for(int i = 0; i < VIS ; i++){ 
         incl(&totales);
@@ -56,36 +72,38 @@ void * molinete_single_core_incl2(){
     } 
 }
 
+static inline void inclLock(int *p) {
+asm("lock; incl %0" : "+m"(*p) : : "memory");
+}
 
-void * molinete2(){
-    for(int i = 0; i < VIS; i++){ 
-        req2 = true;
-        turno = 1;
-        ///asm("mfence");
-        while(turno == 1 && req1);
-        
-        totales++;
-        //printf("Mol 2\n");
-        req2 = false;
+void * molinete_single_core_incl1_lock(){
+    for(int i = 0; i < VIS ; i++){ 
+        inclLock(&totales);
     } 
 }
 
+void * molinete_single_core_incl2_lock(){
+    for(int i = 0; i < VIS ; i++){ 
+        inclLock(&totales);
+    } 
+}
 
 int main(){
 
     pthread_t p1,p2;
-    pthread_create( &p1 ,NULL, molinete_single_core_incl1, NULL );
-    pthread_create( &p2 ,NULL, molinete_single_core_incl2, NULL );
+    while(true){
+        totales = 0;
 
-    pthread_join(p1,NULL);
-    pthread_join(p2,NULL);
+        pthread_create( &p1 ,NULL, molinete_single_core_incl1_lock, NULL );
+        pthread_create( &p2 ,NULL, molinete_single_core_incl2_lock, NULL );
 
-    //printf("tenemos %d visitantes.\n",totales);
+        pthread_join(p1,NULL);
+        pthread_join(p2,NULL);
 
-    assert(totales == 2*VIS);
+        //printf("tenemos %d visitantes.\n",totales);
 
-
-
+        assert(totales == 2*VIS);
+    }
     return 0;
 }
 
@@ -97,7 +115,20 @@ visitantes de los esperados.
 b) Al tener un solo core, los dos hilos corren sobre el mismo core, de esta manera, no es necesario
 sincronizar la cache del core con ningun otro. Por ello, no es necesario el mfence.
 
-c) 
+c) Al tener un solo core y utilizar la instruccion incl de x86, no se generan problemas. 
+Esto ocurre porque, el incremento de la variable visitantes utilizando la instruccion de assembler, es atomico.
+Por lo que no puede generarse el error en el que se ejecuten dos instrucciones de lectura sucesivas antes de incrementar el contador.
+
+d) Al tener mas de un procesador, y usando la instruccion incl, puede generarse un error. Esto sucede porque existe la posibilidad de que un hilo
+incremente la variable, pero esta quede almacenada en la cache del mismo, mientras que el otro hilo incrementa una variable desactualizada.
+
+e) Con la nueva version de la funcion incl, no se genera error. 
+Esto sucede porque esta nueva version incluye el prefijo de instruccion lock, que hace [alguna cosa rara a nivel hadrware],
+y evita el problema del cache del procesador. 
+--The LOCK prefix ensures that the CPU has exclusive ownership of the appropriate cache line for the duration of the operation, 
+and provides certain additional ordering guarantees.
+
+
 
 
 

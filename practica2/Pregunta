@@ -1,9 +1,13 @@
 1) Como funciona el pthread cuando existe un solo core?
+    Se ejecutan las instrucciones de los hilos de forma concurrente.
+
 
 2) Puede que el ej3 no falle?
 Puede que sincronicen cache una vez que las 2 instrucciones se ejecutaron?
+    Lo mas probable es que falle pero una vez muy de vez en cuando, y que sea dificil de ver.
 
-
+Ej 6:
+No estoy seguro de a que version del jardin ornameltal se refiere, y no soy fan de leer assembler
 
 
 
