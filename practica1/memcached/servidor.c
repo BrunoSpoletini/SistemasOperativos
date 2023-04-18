@@ -1,7 +1,7 @@
 #define MAX_EVENTS 256
 #define READ_SIZE 256
 #define MAX_CLIENTS 256
-#define TIMEOUT 10000
+#define TIMEOUT 100
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
