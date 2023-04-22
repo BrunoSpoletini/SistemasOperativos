@@ -45,14 +45,13 @@ Unificar todo a camelCase
 
 Arreglar el mutex del get
 
+El delete deberia devolver true o false si borro o no la clave
+
  */
 
 int lsock;
 
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t arrMutex[MAX_THREADS];
-
-int cSocks[MAX_THREADS];
 
 HashTable hTable;
 
@@ -68,11 +67,11 @@ int fd_readline(int fd, char *buf)
 	int i = 0;
 	while ((rc = read(fd, buf + i, 1)) > 0)
 	{
+		fflush( stdin );
 		if (buf[i] == '\n')
 			break;
 		i++;
 	}
-
 	if (rc < 0)
 		return rc;
 
@@ -136,6 +135,9 @@ int handle_conn(int csock)
 	else if (!strcmp(args[0], "GET"))
 	{
 		pthread_mutex_lock(&mutex);
+		int resGet = get(table, args[1]);
+		pthread_mutex_unlock(&mutex);
+		if (resGet == -1)
 		printf("llamamos a get, con argumentos %s\n",args[1] );
 		if (get(table, args[1]) == -1)
 		{
@@ -143,12 +145,12 @@ int handle_conn(int csock)
 		}
 		else
 		{
-			sprintf(clave, "%d", get(table, args[1]));
-			size = sizeof(get(table, args[1]));
+			sprintf(clave, "%d", resGet);
+			size = strlen(clave);
 			write(csock, clave, size);
 			write(csock, "\n", 1);
 		}
-		pthread_mutex_unlock(&mutex);
+		
 	}
 	return 0;
 }
@@ -165,7 +167,6 @@ void agregarClienteEpoll(int csock, int epoll_fd){
 	}
 	write(csock, "Cliente conectado!\n", 19);
 }
-
 
 void *wait_for_clients(void *epoll)
 {

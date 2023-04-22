@@ -6,11 +6,17 @@
 Puede que sincronicen cache una vez que las 2 instrucciones se ejecutaron?
     Lo mas probable es que falle pero una vez muy de vez en cuando, y que sea dificil de ver.
 
+3) Que se considera mala practica declarar global?
+
+
 Ej 6:
 No estoy seguro de a que version del jardin ornameltal se refiere, y no soy fan de leer assembler
 
 
 
-
+Faltan:
+6)
+8)
+9)
 
 
