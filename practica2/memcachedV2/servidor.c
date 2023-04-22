@@ -2,7 +2,7 @@
 #define READ_SIZE 256
 #define MAX_CLIENTS 256
 #define TIMEOUT 100
-#define MAX_THREADS 4
+#define MAX_THREADS 1
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -88,6 +88,7 @@ int handle_conn(int csock)
 
 	/* Atendemos pedidos, uno por linea */
 	rc = fd_readline(csock, buf);
+	printf("leimos %d caracteres\n",rc);
 	if (rc < 0)
 		quit("Fallo al leer");
 
@@ -102,6 +103,7 @@ int handle_conn(int csock)
 		if (args[i] == NULL)
 			quit("Fallo malloc");
 		strcpy(args[i], token);
+		printf("la palabra %d es %s\n",i,args[i]);
 		token = strtok(NULL, " \n");
 		args[i + 1] = NULL;
 	}
@@ -113,9 +115,12 @@ int handle_conn(int csock)
 		return -1;
 	}
 
+	//printf("leimos el comando %s\n",args[0]);
+
 	if (!strcmp(args[0], "PUT"))
 	{ // PUT test 123
 		pthread_mutex_lock(&mutex);
+		printf("llamamos a put, con argumentos %s y %d\n",args[1],atoi(args[2]) );
 		insert(table, args[1], atoi(args[2]));
 		pthread_mutex_unlock(&mutex);
 		write(csock, "OK\n", 4);
@@ -123,6 +128,7 @@ int handle_conn(int csock)
 	else if (!strcmp(args[0], "DEL"))
 	{
 		pthread_mutex_lock(&mutex);
+		printf("llamamos a del, con argumentos %s\n",args[1] );
 		delete (table, args[1]);
 		pthread_mutex_unlock(&mutex);
 		write(csock, "Clave-valor eliminado exitosamente\n", 35);
@@ -130,6 +136,7 @@ int handle_conn(int csock)
 	else if (!strcmp(args[0], "GET"))
 	{
 		pthread_mutex_lock(&mutex);
+		printf("llamamos a get, con argumentos %s\n",args[1] );
 		if (get(table, args[1]) == -1)
 		{
 			write(csock, "No existe clave para el valor ingresado\n", 40);
