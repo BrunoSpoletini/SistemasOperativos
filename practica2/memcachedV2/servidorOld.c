@@ -43,8 +43,6 @@ Mejorar el parseo del input
 
 Unificar todo a camelCase
 
-Arreglar el mutex del get
-
  */
 
 int lsock;
@@ -129,19 +127,19 @@ int handle_conn(int csock)
 	}
 	else if (!strcmp(args[0], "GET"))
 	{
-		pthread_mutex_lock(&mutex);
 		if (get(table, args[1]) == -1)
 		{
 			write(csock, "No existe clave para el valor ingresado\n", 40);
 		}
 		else
 		{
+			pthread_mutex_lock(&mutex);
 			sprintf(clave, "%d", get(table, args[1]));
 			size = sizeof(get(table, args[1]));
+			pthread_mutex_unlock(&mutex);
 			write(csock, clave, size);
 			write(csock, "\n", 1);
 		}
-		pthread_mutex_unlock(&mutex);
 	}
 	return 0;
 }
@@ -160,26 +158,34 @@ void agregarClienteEpoll(int csock, int epoll_fd){
 }
 
 
-void *wait_for_clients(void *epoll)
+void wait_for_clients(int lsock, int epoll_fd, int threadId)
 {
-	int events_count, epoll_fd = *(int*)epoll;
-	struct epoll_event events[MAX_EVENTS];
+	int run = 1, events_count, bytes_read;
+	char buff[READ_SIZE];
+	struct epoll_event events[MAX_EVENTS], ev;
 
-	while (1)
+	while (run)
 	{
+		// Checkeamos si hay clientes nuevos y los agregamos a la lista de obs de epoll
+		if (pthread_mutex_trylock(&arrMutex[threadId]) == 0){
+			if(cSocks[threadId] != 0){
+				agregarClienteEpoll(cSocks[threadId], epoll_fd);
+				cSocks[threadId] = 0;
+			}
+			pthread_mutex_unlock(&arrMutex[threadId]);
+		}
+		
 		events_count = epoll_wait(epoll_fd, events, MAX_EVENTS, TIMEOUT);
 		for (int i = 0; i < events_count; i++){
-			if (events[i].data.fd != lsock){
-				int csock = events[i].data.fd;
-				if (handle_conn(csock) == -1)
+			int csock = events[i].data.fd;
+			if (handle_conn(csock) == -1)
+			{
+				if (epoll_ctl(epoll_fd, EPOLL_CTL_DEL, csock, NULL))
 				{
-					if (epoll_ctl(epoll_fd, EPOLL_CTL_DEL, csock, NULL) == -1)
-					{
-						close(epoll_fd);
-						quit("Fallo al quitar fd de epoll\n");
-					}
-					close(csock);
+					close(epoll_fd);
+					quit("Fallo al quitar fd de epoll\n");
 				}
+				close(csock);
 			}
 		}
 	}
@@ -240,25 +246,53 @@ int mk_lsock()
 	return lsock;
 }
 
+void *handleThread(void *args)
+{
+	int threadId = *(int*)args;
+	printf("El id es: %d", threadId);
+
+	struct epoll_event ev;
+	int epoll = epoll_create1(0);
+	if (epoll == -1)
+	{
+		quit("Fallo al crear epoll fd\n");
+	}
+
+	wait_for_clients(lsock, epoll, threadId);
+}
+
 int main(){
+	int epoll, clientC = 0, ids[MAX_THREADS];
 	pthread_t t[MAX_THREADS];
 	initHashTable(&hTable);
 
 	lsock = mk_lsock();
 
-	int epoll = create_epoll(lsock);
-
 	for (int i = 0; i < MAX_THREADS; i++){
-		pthread_create(&(t[i]), NULL, wait_for_clients, (void*)&epoll);
+		// Guardamos en memoria el id que recibira el thread
+		ids[i] = i;
+
+		// Array donde se le enviaran los sockets de los clientes a los hilos
+		cSocks[i] = 0; 
+
+		// Inicializamos los mutexes que bloquearan dicho array
+		pthread_mutex_init(&arrMutex[i], NULL);
+
+		// Creamos los threads y les pasamos un id unico como parametro
+		pthread_create(&(t[i]), NULL, handleThread, (void*)&ids[i]);
 	}
 
-	while(1){ // Aceptamos clientes y los agregamos al epoll
+	while(1){ // Aceptamos clientes y los "mandamos" a los hilos correspondientes
 		int csock = accept(lsock, NULL, NULL);
 		if (csock == -1){
 			quit("Fallo al aceptar un cliente");
 		} else {
-			agregarClienteEpoll(csock, epoll);
+			clientC++;
+			pthread_mutex_lock(&arrMutex[clientC%MAX_THREADS]);
+			cSocks[clientC%MAX_THREADS] = csock;
+			pthread_mutex_unlock(&arrMutex[clientC%MAX_THREADS]);
 		}
 	}
+
 	return 0;
 }
