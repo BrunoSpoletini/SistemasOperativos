@@ -2,7 +2,7 @@
 #define READ_SIZE 256
 #define MAX_CLIENTS 256
 #define TIMEOUT 100
-#define MAX_THREADS 1
+#define MAX_THREADS 4
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -19,6 +19,7 @@
 #include <string.h>	   // strtok
 #include <pthread.h>
 #include "hash_table.h"
+#include <unistd.h>
 /*
 Para inicializar la hash table:
 	HashTable table;
@@ -67,7 +68,7 @@ int fd_readline(int fd, char *buf)
 	int i = 0;
 	while ((rc = read(fd, buf + i, 1)) > 0)
 	{
-		fflush( stdin );
+		//fflush( stdin );
 		if (buf[i] == '\n')
 			break;
 		i++;
@@ -96,27 +97,31 @@ int handle_conn(int csock)
 	if (args == NULL)
 		quit("Fallo malloc");
 	token = strtok(buf, " \n"); /// separa segun espacio y \n
+	int palabras = 0;
 	for (int i = 0; token != NULL; i++)
 	{
-		args[i] = malloc(sizeof(token) + 1);
+		args[i] = malloc(strlen(token) + 1);
 		if (args[i] == NULL)
 			quit("Fallo malloc");
 		strcpy(args[i], token);
-		printf("la palabra %d es %s\n",i,args[i]);
+
 		token = strtok(NULL, " \n");
 		args[i + 1] = NULL;
+		palabras++;
 	}
 
-	/* Linea vacia, se cerró la conexión */
+		/* Linea vacia, se cerró la conexión */
 	if (rc == 0)
 	{
 		write(csock, "Cliente desconectado\n", 21);
 		return -1;
 	}
 
+
+
 	//printf("leimos el comando %s\n",args[0]);
 
-	if (!strcmp(args[0], "PUT"))
+	if (!strcmp(args[0], "PUT") && palabras == 3)
 	{ // PUT test 123
 		pthread_mutex_lock(&mutex);
 		printf("llamamos a put, con argumentos %s y %d\n",args[1],atoi(args[2]) );
@@ -124,7 +129,7 @@ int handle_conn(int csock)
 		pthread_mutex_unlock(&mutex);
 		write(csock, "OK\n", 4);
 	}
-	else if (!strcmp(args[0], "DEL"))
+	else if (!strcmp(args[0], "DEL") && palabras == 2)
 	{
 		pthread_mutex_lock(&mutex);
 		printf("llamamos a del, con argumentos %s\n",args[1] );
@@ -132,7 +137,7 @@ int handle_conn(int csock)
 		pthread_mutex_unlock(&mutex);
 		write(csock, "Clave-valor eliminado exitosamente\n", 35);
 	}
-	else if (!strcmp(args[0], "GET"))
+	else if (!strcmp(args[0], "GET") && palabras == 2)
 	{
 		pthread_mutex_lock(&mutex);
 		int resGet = get(table, args[1]);
@@ -155,10 +160,22 @@ int handle_conn(int csock)
 	return 0;
 }
 
+void re_agregarClienteEpoll(int csock, int epoll_fd){
+	// Registro el socket del cliente en epoll
+	struct epoll_event ev;
+	ev.events = EPOLLIN | EPOLLONESHOT;
+	ev.data.fd = csock;
+	if (epoll_ctl(epoll_fd, EPOLL_CTL_MOD, csock, &ev))
+	{
+		close(epoll_fd);
+		quit("Fallo al agregar fd a epoll\n");
+	}
+}
+
 void agregarClienteEpoll(int csock, int epoll_fd){
 	// Registro el socket del cliente en epoll
 	struct epoll_event ev;
-	ev.events = EPOLLIN;
+	ev.events = EPOLLIN | EPOLLONESHOT;
 	ev.data.fd = csock;
 	if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, csock, &ev))
 	{
@@ -179,6 +196,7 @@ void *wait_for_clients(void *epoll)
 		for (int i = 0; i < events_count; i++){
 			if (events[i].data.fd != lsock){
 				int csock = events[i].data.fd;
+				printf("llamamos a handleconn en el socket %d, desde el thread %d\n",csock, gettid() );
 				if (handle_conn(csock) == -1)
 				{
 					if (epoll_ctl(epoll_fd, EPOLL_CTL_DEL, csock, NULL) == -1)
@@ -187,6 +205,8 @@ void *wait_for_clients(void *epoll)
 						quit("Fallo al quitar fd de epoll\n");
 					}
 					close(csock);
+				}else{
+					re_agregarClienteEpoll(csock,epoll_fd);
 				}
 			}
 		}

@@ -1,6 +1,3 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include "hash_table.h"
 #define TABLE_SIZE 1000
 
@@ -43,14 +40,14 @@ int get(HashTable* table, const char* key) {
     return -1;
 }
 
-void delete(HashTable* table, const char* key) {
+bool delete(HashTable* table, const char* key) {
     unsigned long hashValue = hash(key);
     while (table->entries[hashValue].key != NULL) {
         if (strcmp(table->entries[hashValue].key, key) == 0) {
             free(table->entries[hashValue].key);
             table->entries[hashValue].key = NULL;
             table->entries[hashValue].value = -1;
-            return;
+            return true;
         }
         hashValue = (hashValue + 1) % table->size;
     }
