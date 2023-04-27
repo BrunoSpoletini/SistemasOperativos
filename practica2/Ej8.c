@@ -148,6 +148,8 @@ int main(int argc, char**argp){
 }
 /*
 
+(Quieren los tiempos con 1 cpu y con mas de 1.
+Y ademas, con N = 1e6,1e7,1e8)
 Tiempos de ejecucion:
 
 
