@@ -22,5 +22,5 @@ Esto no resulta escalable, ya que existe un limite en la cantidad de procesos qu
 crearse antes de que se termine la memoria del sistema.
 
 En cambio, al utilizar epoll para atender los sockets de los clientes, es posible leer/escribir de multiples
-sockets sin quedar a la espera de uno en particular, lo que permite atender a un mayor numero de clientes 
+sockets sin quedar a la espera de uno en particular, lo que permite atender a un mayor numero de clitentes 
 en simultaneo.
