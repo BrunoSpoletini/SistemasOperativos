@@ -3,10 +3,9 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <semaphore.h>
-#include <stdbool.h>
-#define M 50 /// lectores
-#define N 500 /// escritores
-#define ARRLEN 1000000
+#define M 5 /// lectores
+#define N 5 /// escritores
+#define ARRLEN 100000000
 
 
 /*
@@ -36,63 +35,35 @@ Y vamos sacando a medida que les corresponde.
 
 */
 
+int lecturas,escrituras;
 
-pthread_mutex_t lk;
-int lectores;
-
-void tomar_lock_escritor_a(){
-    bool agarre = false;
-    while(!agarre){
-        pthread_mutex_lock(&lk);
-            if(lectores  == 0){
-                lectores--;
-                agarre = true;
-            }
-        pthread_mutex_unlock(&lk);
-    }
-}
-
-void soltar_lock_escritor_a(){
-    pthread_mutex_lock(&lk);
-        lectores = 0;
-    pthread_mutex_unlock(&lk);
-}
-
-void tomar_lock_lector_a(){
-    bool agarre = false;
-    while(!agarre){
-        pthread_mutex_lock(&lk);
-            if(lectores  >= 0){
-                lectores++;
-                agarre = true;
-            }
-        pthread_mutex_unlock(&lk);
-    }
-}
-
-void soltar_lock_lector_a(){
-    pthread_mutex_lock(&lk);
-        lectores--;
-    pthread_mutex_unlock(&lk);
-}
-
+pthread_mutex_t writelk;
+sem_t sem;
 
 void * escritor(void *arg) {
 
+
+    
     int i;
     int num = arg - (void*)0;
     while (1) {
         sleep(random() % 3);
-        tomar_lock_escritor_a();
 
-        /// si llego aca, lectores vale -1;
+        pthread_mutex_lock(&writelk);
+        for(int i = 0; i < M; i++){ /// tomamos los turnos de todos los escritores.
+            sem_wait(&sem);
+        }
 
-
-        printf("Escritor %d escribiendo %d\n", num);
+        printf("Escritor %d escribiendo %d\n", num,escrituras);
 
         for (i = 0; i < ARRLEN; i++)
             arr[i] = num;
-        soltar_lock_escritor_a();
+
+        for(int i = 0; i < M; i++){ /// tomamos los turnos de todos los escritores.
+            sem_post(&sem);
+        }
+        escrituras++;
+        pthread_mutex_unlock(&writelk);
     }
 
 
@@ -106,9 +77,7 @@ void * lector(void *arg){
 
         
         sleep(random() % 3);
-
-        tomar_lock_lector_a();
-
+        sem_wait(&sem);
         v = arr[0];
         for (i = 1; i < ARRLEN; i++) {
             if (arr[i] != v)
@@ -117,9 +86,9 @@ void * lector(void *arg){
         if (i < ARRLEN)
             printf("Lector %d, error de lectura\n", num);
         else
-            printf("Lector %d, dato %d %d\n", num, v);
-
-        soltar_lock_lector_a();
+            printf("Lector %d, dato %d %d\n", num, v,lecturas);
+        lecturas++;
+        sem_post(&sem);
     }
     return NULL;
 }
@@ -129,7 +98,9 @@ int main(){
     pthread_t lectores[M], escritores[N];
     int i;
 
-    pthread_mutex_init(&lk,NULL);
+    pthread_mutex_init(&writelk,NULL);
+    sem_init(&sem,0,M);
+    
 
     for (i = 0; i < M; i++)
         pthread_create(&lectores[i], NULL, lector, i + (void*)0);
