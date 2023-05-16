@@ -6,116 +6,67 @@
 #include <stdbool.h>
 #include <unistd.h>
 #define maxclients 10000
-#define N 10
+#define Nsillas 10
 
-
-pthread_mutex_t locksillas,lockbarbero; /// lock de la silla.
-
-pthread_cond_t cliente_en_silla, termino_cortar_barbero, nuevo_turno, hay_clientes;
-int sillas = N;
+struct pepe{
+    int a;
+    int b;
+};
 
 /*
-
-hay que atender en orden.
-
-
-
-El cliente abre la puerta, y se fija cuantas sillas disponibles hay.
-le tienen que mandar una señal de despertar al babero.
-Si hay mas de 0, toma una y se queda en espera, sino, se va.
-"se queda en espera": Entra a competir por un lock junto al resto de clientes.
-
+Para atenderlos en orden, cada uno toma un turno.
 */
 
 /*
-Una barber ́ıa tiene una sala de espera con N sillas y
+Una barberıa tiene una sala de espera con N sillas y
 un barbero. Si no hay clientes para atender, el barbero se pone a dormir. Si un cliente llega y todas
 las sillas estan ocupadas, se va. Si el barbero esta ocupado pero hay sillas disponibles, se sienta en
 una y espera a ser atendido. Si el barbero esta dormido, despierta al barbero. El cliente y el barbero
 deben ejecutar concurrentemente las funciones me_cortan() y cortando() y al terminar los dos ejecutar
 concurrentemente pagando() y me_pagan().
-Escriba un programa que coordine el comportamiento del barbero y los clientes y expl ́ıquelo.
+Escriba un programa que coordine el comportamiento del barbero y los clientes y expliquelo.
 */
-int turnoclient;
-bool ocupados, se_sento_cliente, termino_cortar; 
-int turno_atendiendo=-1;
 
-pthread_cond_t pago,listo_cambio;
-bool listopago, listo_vuelto;
+sem_t pago, cambio,sentado,sillas,termino_cortar, cola;
+pthread_cond_t nuevoturno;
+
+pthread_mutex_t ruletaturnos,turno;
+int turnode;
+int ultimo_turno;
 
 void cortando(){ /// ya tengo el lock
-    termino_cortar = false; /// recien empiezo.
-    //pthread_mutex_lock(&lock);
 
-    while(!se_sento_cliente)
-        pthread_cond_wait( &cliente_en_silla , &lockbarbero );
+    sem_wait(&sentado);
     
     printf("B: Le corta el pelo al cliente en la silla\n");
-    sleep(2);
-    termino_cortar = true;
-    pthread_cond_signal(&termino_cortar_barbero);
+    sleep(1);
 
-    pthread_mutex_unlock(&lockbarbero);
+    sem_post(&termino_cortar);
 }
 
 void me_pagan(){
-    pthread_mutex_lock(&lockbarbero);
-    listo_vuelto = false;
-    while(!listopago)
-        pthread_cond_wait(&pago, &lockbarbero);
 
+    sem_wait(&pago);
     printf("B: recibe el pago, le da %d en cambio.\n", rand()%200);
-    //sleep( rand()%2 );
-    listo_vuelto = true;
-    pthread_cond_signal(&listo_cambio);
+    sem_post(&cambio);
 
-    pthread_mutex_unlock(&lockbarbero);
-}
-
-void printestado(){
-    printf("la silla esta:");
-    if(se_sento_cliente){
-        printf("ocupada\n");
-    }else{
-        printf("vacia\n");
-    }
-    printf("El pago esta: ");
-    if(listopago){
-        printf("listo\n");
-    }else{
-        printf("por hacerse\n");
-    }
-    printf("el corte esta:");
-    if(termino_cortar){
-        printf("terminado\n");
-    }else{
-        printf("En proceso\n");
-    }
 }
 
 void *barbero(void *p){
 
-    /// si no hay nadie, entonces duermo.
-
     while(1){
 
-        pthread_mutex_lock(&locksillas);
+        sem_wait(&cola); /// esperamos a que haya alguien en la cola, mientras tanto dormimos
 
-        while(sillas == N)
-            pthread_cond_wait( &hay_clientes , &locksillas );
-        /// si llegamos aca, es nuestro turno
-        pthread_mutex_unlock(&locksillas);
 
-        pthread_mutex_lock(&lockbarbero);
-        turno_atendiendo++;
-        pthread_cond_broadcast(&nuevo_turno);
+        /// aviso a todos que hay un turno disponible, que
+        turnode++;/// es el turno del siguiente
+        asm("mfence");
+        pthread_cond_broadcast(&nuevoturno);
 
         cortando();
         me_pagan();
 
-        printestado();
-
-        pthread_mutex_unlock(&lockbarbero);
     }
 
 }
@@ -123,64 +74,57 @@ void *barbero(void *p){
 
 void me_cortan(int cliente){ /// llego con el lock tomado.
     printf("C[%d]: se sienta en la silla\n", cliente);
-    se_sento_cliente = true;
-    pthread_cond_signal(&cliente_en_silla);
+    sem_post(&sentado);
 
-    while(!termino_cortar)
-            pthread_cond_wait( &termino_cortar_barbero , &lockbarbero );
+    sem_wait(&termino_cortar);
 
     printf("C[%d]: me terminaron de cortar\n", cliente);
-    se_sento_cliente = false; /// se para el cliente.
 }
 
 void pagando(int cliente){ /// llego con el lock tomado
     printf("C[%d]: Le paga al barbero\n", cliente);
 
-    listopago = true;
-    pthread_cond_signal(&pago);
+    sem_post(&pago);
 
-    while(!listo_vuelto)
-        pthread_cond_wait(&listo_cambio,&lockbarbero);
+    sem_wait(&cambio);
 
     printf("C[%d]: recibe el cambio, saluda y se va\n", cliente);
-    listopago = false;
 }
+
 
 void *cliente(void *p){
 
     int client = p - (void*) 0;
 
-    bool hayLugar = false;
-    int turno;
-    pthread_mutex_lock(&locksillas);
-        if(sillas > 0){
-            sillas--;
-            turno = turnoclient;
-            turnoclient++;
-            hayLugar = true;
-        }
-    pthread_mutex_unlock(&locksillas);
+    if( sem_trywait(&sillas) == 0 ){ /// lo lockeamos
 
-    if(!hayLugar){
+        /// sacamos un turno
+        int miturno;
+
+        pthread_mutex_lock(&ruletaturnos);
+            ultimo_turno++;
+            miturno = ultimo_turno;
+        pthread_mutex_unlock(&ruletaturnos);
+
+        sem_post(&cola); /// nos ponemos en la cola
+
+        pthread_mutex_lock(&turno);
+
+        while(turnode != miturno)
+            pthread_cond_wait(&nuevoturno, &turno);
+
+        sem_post(&sillas); /// liberamos una silla.
+
+        me_cortan(client);
+        pagando(client);
+
+        pthread_mutex_unlock(&turno);
+
+
+    }else{
         printf("C[%d]: Se retira por falta de lugar\n", client);
         return (void*) 0;
     }
-
-    pthread_cond_signal(&hay_clientes);
-
-    /// tenemos el turno turno.
-    pthread_mutex_lock(&lockbarbero);
-    while(turno_atendiendo != turno)
-        pthread_cond_wait(&nuevo_turno, &lockbarbero);
-
-    me_cortan(client);
-    pagando(client);
-
-    pthread_mutex_unlock(&lockbarbero);
-
-    pthread_mutex_lock(&locksillas);
-        sillas++;
-    pthread_mutex_unlock(&locksillas);
 
 }
 
@@ -192,6 +136,12 @@ int main(){
     pthread_t pbarber;
     pthread_t pclient[maxclients];
 
+    /// barreras:
+    sem_init(&sentado,0,0); /// indica si se sento un cliente
+    sem_init(&sillas,0,Nsillas); // indica cuantas sillas hay disponibles
+    sem_init(&cola,0,0); /// indica cuantas sillas estan ocupadas
+    sem_init(&pago,0,0); /// indica si el cliente ya preparo el pago
+    sem_init(&cambio,0,0); /// indica si el barbero ya preparo el cambio.
 
     pthread_create(&pbarber, NULL, barbero, NULL);
 
