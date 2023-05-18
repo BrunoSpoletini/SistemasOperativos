@@ -8,14 +8,6 @@
 #define maxclients 10000
 #define Nsillas 10
 
-struct pepe{
-    int a;
-    int b;
-};
-
-/*
-Para atenderlos en orden, cada uno toma un turno.
-*/
 
 /*
 Una barberıa tiene una sala de espera con N sillas y
@@ -31,6 +23,7 @@ sem_t pago, cambio,sentado,sillas,termino_cortar, cola;
 pthread_cond_t nuevoturno;
 
 pthread_mutex_t ruletaturnos,turno;
+
 int turnode;
 int ultimo_turno;
 
@@ -58,10 +51,10 @@ void *barbero(void *p){
 
         sem_wait(&cola); /// esperamos a que haya alguien en la cola, mientras tanto dormimos
 
-
-        /// aviso a todos que hay un turno disponible, que
+        pthread_mutex_lock(&turno);
         turnode++;/// es el turno del siguiente
-        asm("mfence");
+        pthread_mutex_unlock(&turno);
+
         pthread_cond_broadcast(&nuevoturno);
 
         cortando();
@@ -143,6 +136,11 @@ int main(){
     sem_init(&pago,0,0); /// indica si el cliente ya preparo el pago
     sem_init(&cambio,0,0); /// indica si el barbero ya preparo el cambio.
 
+    pthread_mutex_init(&ruletaturnos,NULL);
+    pthread_mutex_init(&turno,NULL);
+
+    pthread_cond_init( &nuevoturno ,NULL );
+
     pthread_create(&pbarber, NULL, barbero, NULL);
 
     int indexc = 0;
@@ -154,6 +152,19 @@ int main(){
 
     pthread_join(pbarber,NULL);
 
+    pthread_cond_destroy(&nuevoturno);
+    sem_destroy(&sillas);
+    sem_destroy(&cola);
+    sem_destroy(&pago);
+    sem_destroy(&cambio);
+    sem_destroy(&sentado);
+    pthread_mutex_destroy(&ruletaturnos);
+    pthread_mutex_destroy(&turno);
+
 
     return 0;
 }
+
+/*
+hay que explicar lo que hace.
+*/

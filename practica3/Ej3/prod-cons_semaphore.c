@@ -14,16 +14,14 @@
  * productores los consiguen con malloc() y los
  * consumidores los liberan con free()
  */
+
 int *buffer[SZ];
 int buffindex;
 
 sem_t lugares,ocupados;
 pthread_mutex_t lk;
 
-void enviar(int *p)
-{
-	/* ???? */
-
+void enviar(int *p){
 
 	sem_wait(&lugares);
 	
@@ -37,9 +35,7 @@ void enviar(int *p)
 	return;
 }
 
-int * recibir()
-{
-	/* ???? */
+int * recibir(){
 
 	sem_wait(&ocupados);
 		pthread_mutex_lock(&lk);
@@ -51,7 +47,7 @@ int * recibir()
 	return rta;
 }
 
-void * prod_f(void *arg)
+void * prodF(void *arg)
 {
 	int id = arg - (void*)0;
 	while (1) {
@@ -65,7 +61,7 @@ void * prod_f(void *arg)
 	return NULL;
 }
 
-void * cons_f(void *arg)
+void * consF(void *arg)
 {
 	int id = arg - (void*)0;
 	while (1) {
@@ -86,13 +82,20 @@ int main()
 	sem_init(&lugares,0,SZ);
 	sem_init(&ocupados,0,0);
 
+	pthread_mutex_init(&lk,NULL);
+
 	for (i = 0; i < M; i++)
-		pthread_create(&productores[i], NULL, prod_f, i + (void*)0);
+		pthread_create(&productores[i], NULL, prodF, i + (void*)0);
 
 	for (i = 0; i < N; i++)
-		pthread_create(&consumidores[i], NULL, cons_f, i + (void*)0);
+		pthread_create(&consumidores[i], NULL, consF, i + (void*)0);
 
 	pthread_join(productores[0], NULL); /* Espera para siempre */
+
+	sem_destroy(&lugares);
+	sem_destroy(&ocupados);
+	pthread_mutex_destroy(&lk);
+
 	return 0;
 }
 

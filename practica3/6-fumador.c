@@ -48,6 +48,7 @@ void * fumador2(void *arg){
 void * fumador3(void *arg){
     while (1){
         sem_wait(&papel);
+        //
         if (sem_trywait(&fosforos) == -1){
             sem_post(&papel);
         } else {
