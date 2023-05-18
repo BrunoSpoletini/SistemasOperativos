@@ -48,7 +48,6 @@ void * fumador2(void *arg){
 void * fumador3(void *arg){
     while (1){
         sem_wait(&papel);
-        //
         if (sem_trywait(&fosforos) == -1){
             sem_post(&papel);
         } else {
@@ -72,11 +71,15 @@ int main(){
 
     agente();
 
+    sem_destroy(&tabaco);
+    sem_destroy(&papel);
+    sem_destroy(&fosforos);
+    sem_destroy(&otra_vez);
+
     return 0;
 }
 
 /*
-si pudiese modificarse el agente, le pondria un lock a los dos elementos que otorga
 
 a) 
 El deadlock puede ocurrir en el caso en el que un fumador toma uno de los ingredientes del agente, e inmediatamente despues
@@ -91,7 +94,6 @@ Ahora analizamos los fumadores segun el orden en el que consumen recursos:
 fumador 1: tabaco, papel
 fumador 2: fosforos, tabaco
 fumador 3: papel, fosforos
-
 
 Para que el fumador consiga fumar, es necesario que obtenga los dos ingredientes del agente.
 Supongamos que el primer ingrediente que otorga el agente son fosforos, y que alguno de los fumadores lo consume primero.
