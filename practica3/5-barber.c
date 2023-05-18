@@ -42,13 +42,11 @@ void me_pagan(){
     sem_wait(&pago);
     printf("B: recibe el pago, le da %d en cambio.\n", rand()%200);
     sem_post(&cambio);
-
 }
 
 void *barbero(void *p){
 
     while(1){
-
         sem_wait(&cola); /// esperamos a que haya alguien en la cola, mientras tanto dormimos
 
         pthread_mutex_lock(&turno);
@@ -59,11 +57,8 @@ void *barbero(void *p){
 
         cortando();
         me_pagan();
-
     }
-
 }
-
 
 void me_cortan(int cliente){ /// llego con el lock tomado.
     printf("C[%d]: se sienta en la silla\n", cliente);
@@ -84,11 +79,9 @@ void pagando(int cliente){ /// llego con el lock tomado
     printf("C[%d]: recibe el cambio, saluda y se va\n", cliente);
 }
 
-
 void *cliente(void *p){
 
     int client = p - (void*) 0;
-
     if( sem_trywait(&sillas) == 0 ){ /// lo lockeamos
 
         /// sacamos un turno
@@ -113,15 +106,12 @@ void *cliente(void *p){
 
         pthread_mutex_unlock(&turno);
 
-
-    }else{
+    } else{
         printf("C[%d]: Se retira por falta de lugar\n", client);
         return (void*) 0;
     }
 
 }
-
-
 
 int main(){
     srand(time(NULL));
