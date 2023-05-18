@@ -155,13 +155,3 @@ int main(){
 
     return 0;
 }
-
-/*
-
-El programa simula una interaccion entre clientes y un barbero.
-Para cada etapa de la interaccion, tenemos un semaforo que funciona de barrera. Este semaforo no permite que 
-la persona actual avance, hasta que la otra persona haya avanzado en la interaccion hasta determinado punto.
-
-De esta manera, tenemos un programa concurrente, donde utilizamos semaforos para sincronizar los hilos.
-
-*/
