@@ -1,4 +1,4 @@
-#include "semConCond.h"
+#include "semaforo.h"
 
 void sem_initC(semC* semCond, int value){
     pthread_mutex_init(&semCond->lock, NULL);

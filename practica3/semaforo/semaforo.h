@@ -1,5 +1,5 @@
-#ifndef semConCond
-#define semConCond
+#ifndef semaforo
+#define semaforo
 
 #include <stdio.h>
 #include <pthread.h>
@@ -17,5 +17,5 @@ void sem_postC(semC* semCond);
 int sem_trywaitC(semC* semCond);
 void* sem_destroyC(semC* semCond);
 
-#include "semConCond.c"
+#include "semaforo.c"
 #endif

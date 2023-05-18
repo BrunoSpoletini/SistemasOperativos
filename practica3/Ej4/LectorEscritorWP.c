@@ -131,3 +131,8 @@ int main(){
 
     return 0;
 }
+
+/*
+En nuestra solucion del apartado a, si hay varios lectores que continuamente intentan leer el arreglo, la variable lectores nunca llega a 0,
+y de esa manera, los escritores quedan a la espera de una condicion que nunca se da. 
+*/
