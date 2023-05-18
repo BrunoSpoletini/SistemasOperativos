@@ -4,38 +4,59 @@
 #include <pthread.h>
 #include <semaphore.h>
 #include <stdbool.h>
-#define N_LECTORES 100 /// lectores
-#define N_ESCRITORES 10 /// escritores
+
+#define N_LECTORES 50 /// lectores
+#define N_ESCRITORES 50 /// escritores
 #define ARRLEN 10000000
 
 int arr[ARRLEN];
 
-pthread_mutex_t lock;
-int lectores;
-pthread_cond_t nadie_leyendo;
+pthread_cond_t terminaron_escrituras, nadie_leyendo;
+pthread_mutex_t lock, lock_write;
+int lectores, wannaWrite;
 
 void tomar_lock_escritor(){
+    pthread_mutex_lock(&lock_write);
+        wannaWrite++;
+    pthread_mutex_unlock(&lock_write);
+
     pthread_mutex_lock(&lock);
-    while(lectores != 0)
-        pthread_cond_wait(&nadie_leyendo,&lock);
-    
+        while(lectores > 0)
+            pthread_cond_wait(&nadie_leyendo, &lock);
 }
 
 void soltar_lock_escritor(){
     pthread_mutex_unlock(&lock);
+
+    pthread_mutex_lock(&lock_write);
+        wannaWrite--;
+        if(wannaWrite == 0){
+            pthread_cond_broadcast(&terminaron_escrituras);
+        }else{
+            pthread_cond_signal(&nadie_leyendo);
+        }
+    pthread_mutex_unlock(&lock_write);
 }
 
 void tomar_lock_lector(){
+
+    pthread_mutex_lock(&lock_write);
+        while(wannaWrite > 0)
+            pthread_cond_wait(&terminaron_escrituras,&lock_write);
+    
     pthread_mutex_lock(&lock);
-    lectores++;
+        lectores++;
     pthread_mutex_unlock(&lock);
+
+    pthread_mutex_unlock(&lock_write);
 }
 
 void soltar_lock_lector(){
     pthread_mutex_lock(&lock);
-    lectores--;
-    if(lectores == 0)
-        pthread_cond_signal(&nadie_leyendo);
+        lectores--;
+        if(lectores == 0)
+            pthread_cond_signal(&nadie_leyendo);
+    
     pthread_mutex_unlock(&lock);
 }
 
@@ -46,7 +67,6 @@ void * escritor(void *arg) {
     int num = arg - (void*)0;
     while (1) {
         sleep(random() % 3);
-
         tomar_lock_escritor();
 
         printf("Escritor %d escribiendo\n", num);
@@ -54,6 +74,7 @@ void * escritor(void *arg) {
             arr[i] = num;
         
         soltar_lock_escritor();
+
     }
 
 
@@ -92,6 +113,9 @@ int main(){
 
     pthread_mutex_init(&lock,NULL);
     pthread_cond_init(&nadie_leyendo, NULL);
+    pthread_mutex_init(&lock_write,NULL);
+    pthread_cond_init(&terminaron_escrituras, NULL);
+    
 
     for (i = 0; i < N_LECTORES; i++)
         pthread_create(&lectores[i], NULL, lector, i + (void*)0);
@@ -101,7 +125,14 @@ int main(){
     pthread_join(lectores[0], NULL); /* Espera para siempre */
     
     pthread_mutex_destroy(&lock);
+    pthread_mutex_destroy(&lock_write);
     pthread_cond_destroy(&nadie_leyendo);
+    pthread_cond_destroy(&terminaron_escrituras);
 
     return 0;
 }
+
+/*
+En nuestra solucion del apartado a, si hay varios lectores que continuamente intentan leer el arreglo, la variable lectores nunca llega a 0,
+y de esa manera, los escritores quedan a la espera de una condicion que nunca se da. 
+*/

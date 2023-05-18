@@ -105,3 +105,12 @@ int main(){
 
     return 0;
 }
+/*
+En esta solución, lo que tenemos es una variable "lectores" que nos dice cuantos de ellos hay actualmente en el archivo.
+Siempre que un nuevo lector quiera entrar a leer, va a competir por un lock y aumentar en 1 esta variable.
+
+Los escritores, por su parte, deben esperar a que no hayan lectores (lectores = 0).
+De no haber ninguno, procede a escribir, de lo contrario, queda dormido a la espera de la condicion "nadie_leyendo".
+Es por eso que, cuando un lector termina de leer, revisa si es el unico que estaba leyendo el archivo, y de ser asi, despierta a algun escritor que
+esperaba la condicion "nadie_leyendo".
+*/

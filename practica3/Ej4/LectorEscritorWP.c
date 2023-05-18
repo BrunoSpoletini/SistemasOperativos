@@ -4,113 +4,60 @@
 #include <pthread.h>
 #include <semaphore.h>
 #include <stdbool.h>
-#define M 50 /// lectores
-#define N 5 /// escritores
+
+#define N_LECTORES 50 /// lectores
+#define N_ESCRITORES 50 /// escritores
 #define ARRLEN 10000000
 
-
-/*
-
--No puede haber un lector accediendo al arreglo al mismo tiempo que un escritor.
--Varios lectores pueden acceder al arreglo simult ́aneamente.
--Solo puede haber un escritor a la vez
-*/
 int arr[ARRLEN];
 
+pthread_cond_t terminaron_escrituras, nadie_leyendo;
+pthread_mutex_t lock, lock_write;
+int lectores, wannaWrite;
 
-/*
-Read - Preferring: mientras que haya gente queriando leer, que lean.
-Solamente cuadno no haya gente leyendo, se pone el writer a escribir.
-Para eso, marcamos una bandera/semaforo de "wantWrite", esperamos a que no hayan
-lectores, y tomamos un lock
+void tomar_lock_escritor(){
+    pthread_mutex_lock(&lock_write);
+        wannaWrite++;
+    pthread_mutex_unlock(&lock_write);
 
-
-Write-Preferring: Cuando un writer quiere escribir, levanta la bandera de escritura,
-entonces, los lectores terminan de leer pero no vuelven a entrar.
-una vez que terminaron todos de leer, el/los writers escriben.
-Una vez que terminaron, bajan la bandera de escritura.
-
-Justa: Metemos las consultas en un buffer, en orden en que aparecen.
-Y vamos sacando a medida que les corresponde.
-
-
-*/
-
-
-/*
-La idea es que, cuando un escritor quiere, suma a una variable wanna write
-
-Los lectores, si wanna_read > 0, entonces se vana a dormir.
-
-entonces, los escritores duermen hasta que no hay mas lectores.
-
-cuando no quedan lectores, se manda una señal.
-
-cuando no quedan escritores, se manda otra señal.
-
-*/
-
-pthread_mutex_t lk;
-int lectores;
-
-pthread_mutex_t lkreaders;
-int wannaWrite;
-
-void tomar_lock_escritor_b(){
-
-    pthread_mutex_lock(&lkreaders);
-    wannaWrite++;
-    pthread_mutex_unlock(&lkreaders);
-
-    bool agarre = false;
-    while(!agarre){
-        pthread_mutex_lock(&lk);
-            if(lectores  == 0){
-                lectores--;
-                agarre = true;
-            }
-        pthread_mutex_unlock(&lk);
-    }
+    pthread_mutex_lock(&lock);
+        while(lectores > 0)
+            pthread_cond_wait(&nadie_leyendo, &lock);
 }
 
-void soltar_lock_escritor_b(){
+void soltar_lock_escritor(){
+    pthread_mutex_unlock(&lock);
 
-    pthread_mutex_lock(&lkreaders);
+    pthread_mutex_lock(&lock_write);
         wannaWrite--;
-    pthread_mutex_unlock(&lkreaders);
-
-    pthread_mutex_lock(&lk);
-        lectores = 0;
-    pthread_mutex_unlock(&lk);
+        if(wannaWrite == 0){
+            pthread_cond_broadcast(&terminaron_escrituras);
+        }else{
+            pthread_cond_signal(&nadie_leyendo);
+        }
+    pthread_mutex_unlock(&lock_write);
 }
 
-void tomar_lock_lector_b(){
-    bool agarre = false;
-    while(!agarre){
+void tomar_lock_lector(){
 
-        bool sigo = false;
-        pthread_mutex_lock(&lkreaders);
-            if( wannaWrite == 0){
-                sigo = true;
-            }
-        pthread_mutex_unlock(&lkreaders);
-        
-        if(!sigo)
-            continue;
-        
-        pthread_mutex_lock(&lk);
-            if(lectores  >= 0){
-                lectores++;
-                agarre = true;
-            }
-        pthread_mutex_unlock(&lk);
-    }
+    pthread_mutex_lock(&lock_write);
+        while(wannaWrite > 0)
+            pthread_cond_wait(&terminaron_escrituras,&lock_write);
+    
+    pthread_mutex_lock(&lock);
+        lectores++;
+    pthread_mutex_unlock(&lock);
+
+    pthread_mutex_unlock(&lock_write);
 }
 
-void soltar_lock_lector_b(){
-    pthread_mutex_lock(&lk);
+void soltar_lock_lector(){
+    pthread_mutex_lock(&lock);
         lectores--;
-    pthread_mutex_unlock(&lk);
+        if(lectores == 0)
+            pthread_cond_signal(&nadie_leyendo);
+    
+    pthread_mutex_unlock(&lock);
 }
 
 
@@ -120,16 +67,14 @@ void * escritor(void *arg) {
     int num = arg - (void*)0;
     while (1) {
         sleep(random() % 3);
-        tomar_lock_escritor_b();
+        tomar_lock_escritor();
 
-        /// si llego aca, lectores vale -1;
-
-
-        printf("Escritor %d escribiendo %d\n", num);
-
+        printf("Escritor %d escribiendo\n", num);
         for (i = 0; i < ARRLEN; i++)
             arr[i] = num;
-        soltar_lock_escritor_b();
+        
+        soltar_lock_escritor();
+
     }
 
 
@@ -137,14 +82,14 @@ void * escritor(void *arg) {
 }
 
 void * lector(void *arg){
+    
     int v, i;
     int num = arg - (void*)0;
-    while (1) {
 
-        
+    while (1) {
         sleep(random() % 3);
 
-        tomar_lock_lector_b();
+        tomar_lock_lector();
 
         v = arr[0];
         for (i = 1; i < ARRLEN; i++) {
@@ -154,24 +99,35 @@ void * lector(void *arg){
         if (i < ARRLEN)
             printf("Lector %d, error de lectura\n", num);
         else
-            printf("Lector %d, dato %d %d\n", num, v);
+            printf("Lector %d, dato %d \n", num, v);
 
-        soltar_lock_lector_b();
+        soltar_lock_lector();
     }
     return NULL;
 }
 
 int main(){
 
-    pthread_t lectores[M], escritores[N];
+    pthread_t lectores[N_LECTORES], escritores[N_ESCRITORES];
     int i;
 
-    pthread_mutex_init(&lk,NULL);
+    pthread_mutex_init(&lock,NULL);
+    pthread_cond_init(&nadie_leyendo, NULL);
+    pthread_mutex_init(&lock_write,NULL);
+    pthread_cond_init(&terminaron_escrituras, NULL);
+    
 
-    for (i = 0; i < M; i++)
+    for (i = 0; i < N_LECTORES; i++)
         pthread_create(&lectores[i], NULL, lector, i + (void*)0);
-    for (i = 0; i < N; i++)
+    for (i = 0; i < N_ESCRITORES; i++)
         pthread_create(&escritores[i], NULL, escritor, i + (void*)0);
-        pthread_join(lectores[0], NULL); /* Espera para siempre */
+    
+    pthread_join(lectores[0], NULL); /* Espera para siempre */
+    
+    pthread_mutex_destroy(&lock);
+    pthread_mutex_destroy(&lock_write);
+    pthread_cond_destroy(&nadie_leyendo);
+    pthread_cond_destroy(&terminaron_escrituras);
+
     return 0;
 }

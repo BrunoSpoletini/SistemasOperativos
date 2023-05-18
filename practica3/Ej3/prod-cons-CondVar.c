@@ -27,10 +27,7 @@ bool isEmpty(){
 
 pthread_mutex_t lk;
 pthread_cond_t non_full_cond, non_empty_cond;
-void enviar(int *p)
-{
-	/* ???? */
-
+void enviar(int *p){
 
 	pthread_mutex_lock(&lk);
 	while( isFull() )
