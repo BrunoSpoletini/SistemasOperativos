@@ -3,7 +3,7 @@
 #include <math.h>
 
 //
-//gcc -fopenmp 3-primalidad.c -lm && OMP_NUM_THREADS=2 ./a.out
+//gcc -fopenmp 3-primalidadOMP.c -lm && OMP_NUM_THREADS=2 ./a.out
 /*
 Números primos de 64 bits:
 
@@ -23,16 +23,18 @@ Números pares de 64 bits:
 9223372036854775810
 9223372036854775814
 */
-long n = 9223372036854775837;
+long n = 1000000000000000003;
 
 int main(){
     int root, primo=1;
 
-    root = floor(sqrt(n));
-    #pragma omp paralel
+    root = ceil(sqrt(n));
+    #pragma omp parallel
     {
+        //int soy = omp_get_thread_num();
         #pragma omp for
-        for (int i=2; i < root; i++){
+        for (int i=2; i <= root; i++){
+            //printf("%d %d\n",soy, i);
             if( n % i == 0){
                 primo = 0;
                 // El break no funciona con OpenMP
