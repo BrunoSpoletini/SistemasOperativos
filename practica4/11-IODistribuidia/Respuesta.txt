@@ -1,0 +1,10 @@
+Corra el siguiente programa con diferentes números de procesos y describa que hace:
+
+Inicialmente, el proceso master (0) , llena un buffer con 4 datos por proceso, donde buf[ i ] = i*i.
+Luego, el master, se encarga de crear un archivo (dat1), con permisos de escritura unicamente validos para él, va hasta la posicion 0 del archivo, y ahi escribe la informacion
+del buffer.
+
+Luego, cada proceso (P_i) abre el archivo creado por el proceso master, y lee los primeros 4 datos guardados a partir
+de la posicion ( P_i * 4 ), y los guarda en buf2, para luego imprimirlos por pantalla.
+
+Por la forma en que cada proceso lee del archivo, cada dato es leido por un unico proceso.

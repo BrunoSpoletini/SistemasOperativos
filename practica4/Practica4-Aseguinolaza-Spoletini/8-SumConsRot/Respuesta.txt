@@ -1,0 +1,15 @@
+El algoritmo que se implementa crea N procesos, para los cuales cada uno posee un valor privado que consta de su rango + 1.
+Se busca realizar la suma de todos los valores privados de los procesos, y que ésta esté disponible para cada uno. 
+Para esto, comunicamos los procesos utilizando las funciones MPI_Isend y MPI_Recv:
+
+Inicialmente, el proceso P_i llama a MPI_Isend(&variable, 1, MPI_INT, (i+1)%N , 0, MPI_COMM_WORLD, &request),
+la cual se encarga de enviar el valor en esa variable, en formato int,  al proceso con id (i+1)%N. En contraparte
+con la funcion MPI_Send, MPI_Isend no es bloqueante, lo cual nos permite que todos los procesos envien al mismo tiempo
+sin terminar en deadlock.
+
+Luego, para recibir los valores, el proceso P_i llama a MPI_Recv(&variable, 1, MPI_INT, (i-1+N)%N, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE),
+la cual recibe un valor entero proveniente del proceso (i-1+N)%N, y lo almacena en la variable.
+
+Cada vez que un proceso recibe un valor del proceso anterior, lo suma en una variable total.
+
+Despues de N-1 pasos, las variables total de cada proceso deberian tener el mismo valor.

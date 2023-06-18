@@ -37,7 +37,7 @@ int main(int argc, char** argv){
         totsum += get; /// sumamos a un total
     }
 
-    assert( totsum == size_Of_Cluster*(size_Of_Cluster+1)/2 );
+    assert(totsum == size_Of_Cluster*(size_Of_Cluster+1)/2 );
 
     MPI_Finalize();
 

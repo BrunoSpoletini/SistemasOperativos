@@ -1,0 +1,47 @@
+a)Compare la performance con la solución secuencial para matrices cuadradas de tamaño 200x200,
+500x500 y 1000x1000. ¿Qué relación aproximada puede inferir entre los tiempos en uno y otro caso?
+
+SpeedUp (Sp) = Ts / Tp ( Ts: Tiempo secuencial. Tp: Tiempo Paralelo )
+Eficiencia (Ep) = Sp / p (Sp:SpeedUp. p: Nº de procesadores )
+
+Para los test en paralelo se utlizaron 4 procesadores:
+
+200x200:
+Paralelo: 0.015s
+Secuencial: 0.035s
+Sp = 2.33
+Ep = 0.58
+
+500x500:
+Paralelo: 0.096s
+Secuencial: 0.352s
+Sp = 3.67
+Ep = 0.92
+
+1000x1000:
+Paralelo: 0.728s
+Secuencial: 2.853s
+Sp = 3.92
+Ep = 0.98
+
+Vemos que la eficiencia tiende a 1, a medida que N aumenta, por lo que vemos que el tiempo paralelo es p veces mas chico que el tiempo secuencial.
+
+b) Si se cambia el orden de los índices, ¿se puede mejorar el rendimiento? ¿Por qué?
+
+Respecto a la complejidad del algoritmo, no es posible mejorarlo por el hecho de reordenar los indices.
+Desde el punto de vista de acceso a memoria, si se reordenan los indices de manera tal que consultas consecutivas
+a la memoria , sean a lugares contiguos de la misma, se obtiene un speedup gracias a la cache.
+En el siguiente apartado se ve un ejemplo de como lograr esto.
+
+c) Si tuviese que computar la multiplicacion de A × B_T, ¿se puede mejorar el rendimiento? ¿Por qué?
+
+Al computar A x B_T, calculamos C[i][j] como la suma de las iteraciones de A[i][k] * B_T[j][k]. De esta manera,
+se accede a lugares de memoria contiguos, aprovechandose mucho mas de la cache. Asi,  tenemos un costo menor
+(amortizado) para acceder a los valores de B_T. Sumado a esto, el costo de la multiplicacion de matrices es O(N^3),
+mientras que el costo de transponer una matriz es de O(N^2), por lo que para matrices lo suficientemente grandes el
+costo de transponerla es despreciable y la mejora de rendimiento es significativa.
+
+Para un test con N = 2000,y 4 procesadores,  veamos la diferencia con y sin transponer la matriz:
+
+Transponiendo: 5.111s
+Sin Transponer: 9.996s
