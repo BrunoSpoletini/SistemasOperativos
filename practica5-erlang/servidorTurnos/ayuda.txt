@@ -1,0 +1,56 @@
+
+gen_tcp:send(Socket, integer_to_list(Turn));
+Pero usando:
+https://www.erlang.org/doc/man/erlang.html#integer_to_binary-1
+
+El cliente esta en c.
+El servidor se codea en erlang.
+
+<<N,_/binary>>
+
+receive
+        {tcp, Socket, "NUEVO"} ->
+            gen_tcp:send(Socket, integer_to_list(Turn));
+        {tcp, Socket, "CHAU"} ->
+            gen_tcp:send(Socket, "Cerrando conexión\n"),
+            gen_tcp:close(Socket),
+        get_request(Socket, Turn)
+    end.
+
+Comparar con la practica 2
+
+/usr/bin/time -v COMANDO
+
+                    {active, true}   {active,false}
+                   +--------------+----------------+
+{packet, 1|2|4}:   |    receive   |     recv()     |
+                   |    no loop   |     no loop    |
+                   +--------------+----------------+
+{packet, 0|raw}:   |    receive   |     recv()     |
+  (equivalent)     |    loop      |     loop       |
+                   +--------------+----------------+   
+
+
+Cuando un proceso termina en mpi mueren todos
+
+En erlang lo podes controlar vos, linkeano los procesos
+
+Para comparar performance:
+https://www.erlang.org/docs/22/efficiency_guide/profiling.html
+
+
+Para el tp final:
+Contemplar la posibilidad de que lleguen mensajes de a pedazos/pegados/etc.
+
+Para parsear:
+fun(["NUEVO" | Tl ])
+
+
+Mantener en el estado de get_request un buffer/lista
+para recibir las requests pegadas/cortadas.
+
+Para el 9
+Correr el codigo en una terminal
+editar el codigo en vscode
+compilarlo desde otra terminal
+ver como cambia el comportamiento desde la terminal original
