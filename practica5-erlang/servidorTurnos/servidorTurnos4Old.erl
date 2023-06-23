@@ -1,5 +1,5 @@
 -module(servidorTurnos4Old).
--export([server/0, rev/1]).
+-export([server/0, rev/1, head/1]).
 -import(lists,[reverse/1]).
 
 -define(PORT,8000).
@@ -31,19 +31,58 @@ get_request(Socket, Msgs, N) ->
     io:fwrite("Esperando mensajes de ~p~n", [Socket]),
     case gen_tcp:recv(Socket, 0) of
         {ok, Ms} ->  
-            %Ms = rev(RMs),
+
             io:fwrite("El mensaje Final (cuando se haya terminado de recibir) es: ~p~n", [rev(list_to_binary([rev(Ms), Msgs]))]),
-            %gen_tcp:send(Socket, list_to_binary(integer_to_list(N))),
-            %parse_msg(Ms, Socket),
-            get_request(Socket, [rev(Ms),Msgs], N);
+
+
+
         {error, Error} -> 
             io:fwrite("Error al recibir mensaje de cliente por motivo: ~p~n", [Error])
     end.
 
-% parse_msg(, Socket) -> gen_tcp:send(Socket, );
-% parse_msg() -> ;
 
-%list_to_binary([1,2,3]). 
+% Parceamos el mensaje en el orden correcto,
+
+process_msg(Socket, Ms, Msgs, N) ->
+
+    case parse_msg(rev(list_to_binary([rev(Ms), Msgs]))) of 
+        {nuevo, MsgLeft} ->
+            %gen_tcp:send(Socket, list_to_binary(integer_to_list(N))),
+            io:fwrite("Recibio un nuevo entero~n"), %debug
+            
+            get_request(Socket, MsgLeft, N);
+        {chau, MsgLeft} ->pending%%pendiente
+        {noMatch} ->pending;
+        {errorMsg} -> pending
+    end;
+
+
+
+% Parsea el mensaje y checkea si es correcto
+parse_msg([]) -> {noMatch};
+parse_msg("NUEVO\n" ++ Rest) -> {nuevo, rev(Rest)};
+parse_msg("CHAU\n" ++ Rest) -> {chau, rev(Rest)};
+parse_msg(Rest) -> case is_msg_correct(Rest) of
+                        {correcto} -> 
+                            {noMatch};
+                        {incorrecto} -> 
+                            io:fwrite("Solicitud incorrecta~n"),
+                            {errorMsg}
+                    end.
+                
+% (Probablemente se pueda mejorar haciendo un mejor manejo de strings)
+% Checkea que el mensaje comience por el termino "NUEVO\n" o "CHAU\n", si no
+% lo hacen, el mensaje se marca como invalido.
+is_msg_correct(Msg) ->  SplitN = (head(string:split("NUEVO\n", Msg))),
+                        SplitC = (head(string:split("CHAU\n", Msg))),
+                        if ((SplitN == []) or (SplitC == [])) -> {correcto};
+                        true -> {incorrecto}
+                        end.
+
+% Devuelve el primer elemento de una lista
+head([]) -> [];
+head([H|_]) -> [H].
+
 
 rev(Binary) ->
    Size = size(Binary)*8,
