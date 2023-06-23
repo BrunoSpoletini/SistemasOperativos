@@ -1,5 +1,5 @@
 -module(servidorTurnos4Old).
--export([server/0]).
+-export([server/0, rev/1]).
 -import(lists,[reverse/1]).
 
 -define(PORT,8000).
@@ -32,10 +32,10 @@ get_request(Socket, Msgs, N) ->
     case gen_tcp:recv(Socket, 0) of
         {ok, Ms} ->  
             %Ms = rev(RMs),
-            io:fwrite("El mensaje hasta ahora es: ~p~n", [list_to_binary([Ms, Msgs])]),
+            io:fwrite("El mensaje Final (cuando se haya terminado de recibir) es: ~p~n", [rev(list_to_binary([rev(Ms), Msgs]))]),
             %gen_tcp:send(Socket, list_to_binary(integer_to_list(N))),
             %parse_msg(Ms, Socket),
-            get_request(Socket, [Ms,Msgs], N);
+            get_request(Socket, [rev(Ms),Msgs], N);
         {error, Error} -> 
             io:fwrite("Error al recibir mensaje de cliente por motivo: ~p~n", [Error])
     end.
@@ -43,6 +43,12 @@ get_request(Socket, Msgs, N) ->
 % parse_msg(, Socket) -> gen_tcp:send(Socket, );
 % parse_msg() -> ;
 
+%list_to_binary([1,2,3]). 
+
+rev(Binary) ->
+   Size = size(Binary)*8,
+   <<X:Size/integer-little>> = Binary,
+   <<X:Size/integer-big>>.
 
 %c(servidorTurnos4Old), spawn(servidorTurnos4Old,server,[]).
 
