@@ -18,7 +18,7 @@
 /*
  * Para probar, usar netcat. Ej:
  *
- *      $ nc localhost 4040
+ *      $ nc localhost 8000
  *      NUEVO
  *      0
  *      NUEVO
@@ -110,7 +110,7 @@ void wait_for_clients(int lsock)
     }
 }
 
-/* Crea un socket de escucha en puerto 4040 TCP */
+/* Crea un socket de escucha en puerto 8000 TCP */
 int mk_lsock()
 {
 	struct sockaddr_in sa;
@@ -128,10 +128,10 @@ int mk_lsock()
 		quit("setsockopt");
 
 	sa.sin_family = AF_INET;
-	sa.sin_port = htons(4040);
+	sa.sin_port = htons(8000);
 	sa.sin_addr.s_addr = htonl(INADDR_ANY);
 
-	/* Bindear al puerto 4040 TCP, en todas las direcciones disponibles */
+	/* Bindear al puerto 8000 TCP, en todas las direcciones disponibles */
 	rc = bind(lsock, (struct sockaddr *)&sa, sizeof sa);
 	if (rc < 0)
 		quit("bind");

@@ -8,7 +8,7 @@
 #include <errno.h>
 
 #define BUFF_SIZE 1024
-#define N 10
+#define N 200
 
 int main()
 {
@@ -100,11 +100,15 @@ int main()
 		buffer[cto] = 0;
 		printf("A [%s] devuelve [%s]\n", buffer2, buffer);
 
-	
+		rc = 0;
+		sprintf(buffer3,"CHAU\n");
+		cto = strlen(buffer3);
+		rc = write(sock[i], buffer3, cto);
+		if (rc < 0) {
+			perror("CLNT: Error escribiendo");
+			return -1;
+		}
 	}
-
-	for (i = 0; i < N; i++)
-		close(sock[i]);
 
 	return 0;
 }
