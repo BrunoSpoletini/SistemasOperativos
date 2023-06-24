@@ -8,7 +8,7 @@
 #include <errno.h>
 
 #define BUFF_SIZE 1024
-#define N 50000
+#define N 20000
 
 int main()
 {
