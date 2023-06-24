@@ -1,10 +1,28 @@
 a) ¿Que similitudes y diferencias encontro en cuanto a la implementacion?
 
+Las similitudes estan en la informacion que debe tener cada proceso, como son el indice del siguiente proceso y la suma actual del proceso.
+Dentro de las diferencias, encontramos las cosas que mpi hace por defecto, como es levantar los N procesos.
 
 
 b) Compare la performance y la robustez. ¿Que pasa si un proceso muere en cada caso?
 
+MPI no nos permite levantar mas procesos que procesadores tengamos en la pc donde se ejecuta el programa.
+De esta manera, no nos es posible comparar con un N mayor que 4. Para el caso de N=4, es un test poco significativo ya que
+el tiempo de computo resulta poco significativo al lado de, por ejemplo, levantar la maquina virtual de erlang.
 
-Nota: En linux puede usar el comando /usr/bin/time -v PROGRAMA para ver el uso de memoria. Por
-ejemplo haciendo /usr/bin/time -v erl y luego saliedo del interprete podemos tener una noci´on de
-cuanta memoria usa Erlang para levantar su entorno de ejecuci´on.
+De todas formas, esta es la performance que conseguimos:
+
+N=4:
+Erlang:
+    User time (seconds): 0.36
+    Maximum resident set size (kbytes): 48420
+MPI:
+    System time (seconds): 0.09
+    Maximum resident set size (kbytes): 25964
+
+
+En caso de morir un proceso en Erlang, nadie se entera, ya que fueron creados con spawn. y queda un computo parcial.
+Ninguno de los procesos termina ya que espera que le lleguen los valores restantes para completar la vuelta del anillo.
+
+En caso de morir un proceso en MPI, el resto de los procesos se enteran, y finalizan su ejecucion.
+

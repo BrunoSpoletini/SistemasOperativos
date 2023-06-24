@@ -1,6 +1,6 @@
 -module(sumacon).
 -export([run/0]).
--define(N,10).
+-define(N,4).
 
 % Recibe valores y envia la suma N veces hasta completar el ciclo,
 % e imprime el resultado.
