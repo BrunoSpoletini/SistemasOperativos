@@ -1,0 +1,10 @@
+a) ¿Que similitudes y diferencias encontro en cuanto a la implementacion?
+
+
+
+b) Compare la performance y la robustez. ¿Que pasa si un proceso muere en cada caso?
+
+
+Nota: En linux puede usar el comando /usr/bin/time -v PROGRAMA para ver el uso de memoria. Por
+ejemplo haciendo /usr/bin/time -v erl y luego saliedo del interprete podemos tener una noci´on de
+cuanta memoria usa Erlang para levantar su entorno de ejecuci´on.
