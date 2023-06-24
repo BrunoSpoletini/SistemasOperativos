@@ -1,57 +1,52 @@
-a) 
-Erlang
-N: Numero de clientes
+a)
+Servidor de turnos en Erlang:
 N = 200
-real    0m0.113s
-user    0m0.000s
-sys     0m0.042s
-
+        User time (seconds): 0.58
+        System time (seconds): 0.12
+        Maximum resident set size (kbytes): 66004
 N = 2000
-real    0m7.416s
-user    0m0.011s
-sys     0m0.434s
-
+        User time (seconds): 1.43
+        System time (seconds): 0.58
+        Maximum resident set size (kbytes): 75552
 N = 20000
-real    0m36.711s
-user    0m0.154s
-sys     0m4.109s
+        User time (seconds): 8.42
+        System time (seconds): 3.73
+        Maximum resident set size (kbytes): 203304
 
-C, Pthreads
-N: Numero de clientes
-N = 200
-real    0m0.103s
-user    0m0.047s
-sys     0m0.000s
-
-N = 2000
-real    0m3.063s
-user    0m0.000s
-sys     0m0.501s
-
-N = 20000
-real    0m16.581s
-user    0m0.188s
-sys     0m4.780s
+Servidor de turnos en C:
+N=200
+        User time (seconds): 0.08
+        System time (seconds): 2.02
+        Maximum resident set size (kbytes): 1688
+N=2000
+        User time (seconds): 0.15
+        System time (seconds): 4.93
+        Maximum resident set size (kbytes): 1600
+N=20000
+        User time (seconds): 0.57
+        System time (seconds): 14.40
+        Maximum resident set size (kbytes): 1552
+"Resident set size" es la suma total de memoria fisica alocada
+a un proceso en un momento dado de tiempo.
 
 Podemos ver que para pocas conexiones, el tiempo de procesamiento es casi despreciable.
-Para valores mas grandes, no hay una diferencia significativa entre los tiempos
-de ambos servidores.
+Para valores mas grandes, podemos notar que el servidor en erlang tiene una
+ligera ventaja con respecto a c.
 
 b)
-Habria que ver como ver la memoria antes de que termine de ejecutarse el proceso del
-cliente ---PENDIENTE---
+De los resultados de aplicar /usr/bin/time -v a ambos servidores, notamos que
+el uso de memoria del servidor en erlang escala a medida que aumenta el N,
+mientras que el servidor en c mantiene un uso constante de memoria a medida que
+aumenta el N, ademas de ser mucho menor al de erlang (llegando a ocupar 1/100 de la memoria
+ocupada en erlang para N=20000). 
 
 c)
 Ambos servidores pueden aceptar 50000 conexiones simultaneas,
 a continuacion puede verse una comparacion de los tiempos de ejecucion.
 Servidor en Erlang:
-real    1m18.879s
 user    0m0.580s
 sys     0m10.098s
 
 Servidor en C: (usando pthreads y epoll)
-real    0m37.926s
 user    0m0.416s
 sys     0m12.379s
-
-

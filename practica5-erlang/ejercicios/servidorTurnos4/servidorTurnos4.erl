@@ -1,7 +1,7 @@
 -module(servidorTurnos4).
 -export([server/0, rev/1, head/1, tail/1]).
 -define(PORT,8000).
--define(DEBUG, true). % true para visaulizar lo que ocurre en el servidor; false para hacer pruebas de rendimiento
+-define(DEBUG, false). % true para visaulizar lo que ocurre en el servidor; false para hacer pruebas de rendimiento
 % c(servidorTurnos4), spawn(servidorTurnos4,server,[]).
 
 % Crea un socket de escucha tcp de recepcion pasiva, 
