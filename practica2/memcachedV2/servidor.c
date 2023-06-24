@@ -117,10 +117,6 @@ int handle_conn(int csock)
 		return -1;
 	}
 
-
-
-	//printf("leimos el comando %s\n",args[0]);
-
 	if (!strcmp(args[0], "PUT") && palabras == 3)
 	{ // PUT test 123
 		pthread_mutex_lock(&mutex);
