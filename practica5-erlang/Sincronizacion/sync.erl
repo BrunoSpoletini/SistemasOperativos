@@ -5,29 +5,34 @@
 
 
 
-semaphore(N) ->
-    receive
-    
+semaphore(N, Xs) ->
+    if ( (N > 0) and (Xs /= []) ) ->
+            lists:last(Xs) ! {downok},
+            semaphore(N-1, lists:droplast(Xs));
+        true ->
+            receive
+            {down, Pid} -> semaphore(N, lists:append( [Pid], Xs  ) );
+            {up} -> semaphore( N+1, Xs)
+        end
     end.
 
-createSem (_N) -> throw(undefined).
-destroySem (_S) -> throw (undefined).
-semP (_S) -> _S ! {down},
+    
+createSem (_N) -> spawn( fun() -> semaphore(_N, []) end).
+
+destroySem (_S) -> exit( _S , kill ).
+
+semP (_S) -> _S ! {down, self() },
             receive
-                {downok} -> ok.
+                {downok} -> ok
             end.
+semV (_S) -> _S ! {up}.
 
-semV (_S) -> _S ! {up} %paso de largo.
 
-createSem (_N) -> throw(undefined).
-destroySem (_S) -> throw (undefined).
-semP (_S) -> throw (undefined).
-semV (_S) -> throw (undefined).
 
-createLock () -> throw (undefined).
-lock (_L) -> throw (undefined).
-unlock (_L) -> throw (undefined).
-destroyLock (_L) -> throw (undefined).
+createLock () -> createSem(1).
+lock (_L) -> semP (_L).
+unlock (_L) -> semV (_L).
+destroyLock (_L) -> destroySem (_L).
 
 
 
