@@ -1,0 +1,52 @@
+a)
+Servidor de turnos en Erlang:
+N = 200
+        User time (seconds): 0.58
+        System time (seconds): 0.12
+        Maximum resident set size (kbytes): 66004
+N = 2000
+        User time (seconds): 1.43
+        System time (seconds): 0.58
+        Maximum resident set size (kbytes): 75552
+N = 20000
+        User time (seconds): 8.42
+        System time (seconds): 3.73
+        Maximum resident set size (kbytes): 203304
+
+Servidor de turnos en C:
+N=200
+        User time (seconds): 0.08
+        System time (seconds): 2.02
+        Maximum resident set size (kbytes): 1688
+N=2000
+        User time (seconds): 0.15
+        System time (seconds): 4.93
+        Maximum resident set size (kbytes): 1600
+N=20000
+        User time (seconds): 0.57
+        System time (seconds): 14.40
+        Maximum resident set size (kbytes): 1552
+"Resident set size" es la suma total de memoria fisica alocada
+a un proceso en un momento dado de tiempo.
+
+Podemos ver que para pocas conexiones, el tiempo de procesamiento es casi despreciable.
+Para valores mas grandes, podemos notar que el servidor en erlang tiene una
+ligera ventaja con respecto a c.
+
+b)
+De los resultados de aplicar /usr/bin/time -v a ambos servidores, notamos que
+el uso de memoria del servidor en erlang escala a medida que aumenta el N,
+mientras que el servidor en c mantiene un uso constante de memoria a medida que
+aumenta el N, ademas de ser mucho menor al de erlang (llegando a ocupar 1/100 de la memoria
+ocupada en erlang para N=20000). 
+
+c)
+Ambos servidores pueden aceptar 50000 conexiones simultaneas,
+a continuacion puede verse una comparacion de los tiempos de ejecucion.
+Servidor en Erlang:
+user    0m0.580s
+sys     0m10.098s
+
+Servidor en C: (usando pthreads y epoll)
+user    0m0.416s
+sys     0m12.379s

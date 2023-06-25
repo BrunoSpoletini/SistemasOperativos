@@ -19,7 +19,6 @@
 #include <string.h>	   // strtok
 #include <pthread.h>
 #include "hash_table.h"
-#include <unistd.h>
 /*
 Para inicializar la hash table:
 	HashTable table;
